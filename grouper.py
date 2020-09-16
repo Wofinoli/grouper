@@ -1,4 +1,5 @@
 import pandas as pd
+import sys
 import re
 import string
 import os
@@ -8,9 +9,9 @@ WELLS = 384
 # Gets relevant data from the csv file
 # Needs: filename
 # Returns: Dataframe with relevant data
-def get_relevant():
+def get_relevant(filename):
     print("Getting relevant data.")
-    nav = pd.read_csv('Nav18_virtSSI_15.53.46 RF091120.csv',sep='\t', index_col = 0)
+    nav = pd.read_csv(filename,sep='\t', index_col = 0)
 
     index = nav.index
     columns = nav.columns
@@ -38,10 +39,19 @@ def get_relevant():
 
 def main():
 
-    csv_files = [name for name in os.listdir("./") if name.endswith(".csv")]
-    print(csv_files)
+    csv_files = [name for name in os.listdir("./input/") if name.endswith(".csv")]
+    if len(csv_files) < 1:
+        sys.exit("No csv files found! Are you in the right directory?")
 
-    rel_data = get_relevant()
+    for i, name in enumerate(csv_files, start=1):
+        print( "({}) {}".format(i, name) )
+
+    index = int(input("Which file do you want to process? "))
+    while index < 1 or index > len(csv_files):
+        index = int(input("Try again. Which file do you want to process? "))
+
+    filename = csv_files[index-1]
+    rel_data = get_relevant("./input/" + filename)
     rel_arr = rel_data.iloc[:,0].to_numpy()
 
     plate_cols = 24
@@ -50,7 +60,7 @@ def main():
 
     clean = pd.DataFrame(data = rel_arr.reshape(plate_rows, plate_cols,order='F'), index=row_names, columns=range(1,plate_cols+1))
 
-    os.makedirs(os.path.dirname("./out/"), exist_ok=True)
-    clean.to_csv('./out/clean.csv')
+    os.makedirs(os.path.dirname("./output/"), exist_ok=True)
+    clean.to_csv("./output/clean_" + filename)
 
 main()
