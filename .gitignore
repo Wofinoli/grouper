@@ -2,4 +2,6 @@
 *.ipynb
 output/
 input/
+.gitignore
+.nosync
 reqs.txt

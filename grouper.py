@@ -62,8 +62,16 @@ def main():
     os.makedirs(os.path.dirname("./output/"), exist_ok=True)
 
     # Choose plate layout
-    plate_cols = 24 # int(input("How many columns? "))
-    plate_rows = 16 # int(input("How many rows? "))
+    plate_options = [(24,16)]
+    for i, options in enumerate(plate_options, start=1):
+        print("({}) {} columns, {} rows".format(i, options[0], options[1]))
+
+    option = int(input("What is your plate layout? " ))
+    while option < 1 or option > len(plate_options):
+        option = int(input("That's not an option. Try again: "))
+
+    plate_cols, plate_rows = plate_options[option-1][0], plate_options[option-1][1]
+
     row_names = list(string.ascii_uppercase[:plate_rows])
 
     if not plate_cols * plate_rows == WELLS:
@@ -72,6 +80,7 @@ def main():
     # Create directories for each parameter
     path = "./output/" + filename[:-4] + "/"
     for index, param in enumerate(parameters, start=0):
+        param = param.replace("/", "Per")
         param_path = path + param + "/"
         if not os.path.isdir(param_path):
             os.makedirs(param_path, exist_ok=True);
@@ -82,8 +91,6 @@ def main():
             clean = pd.DataFrame(data = rel_arr.reshape(plate_rows, plate_cols,order='F'), index=row_names, columns=range(1,plate_cols+1))
 
             clean.to_csv(filepath)
-
-
 
     # Choose sweep
 #    sweep = int(input("\nThere are {} sweeps. Which sweep do you want to process? ".format(num_sweeps)))
