@@ -35,10 +35,11 @@ def get_relevant(filename):
         else:
             bool_mask.append(False)
 
-    return nav.loc['A01':, columns[bool_mask]]
+    return nav.loc['A01':, columns[bool_mask]], nav.iloc[0,2:2+num_param] # Parameter selection can probably be improved
 
 def main():
 
+    # Choose file
     csv_files = [name for name in os.listdir("./input/") if name.endswith(".csv")]
     if len(csv_files) < 1:
         sys.exit("No csv files found! Are you in the right directory?")
@@ -51,8 +52,17 @@ def main():
         index = int(input("Try again. Which file do you want to process? "))
 
     filename = csv_files[index-1]
-    rel_data = get_relevant("./input/" + filename)
-    rel_arr = rel_data.iloc[:,0].to_numpy()
+    rel_data, parameters = get_relevant("./input/" + filename)
+
+    # Choose parameter
+    for i, param in enumerate(parameters, start=1):
+        print("({}) {}".format(i, param))
+
+    index = int(input("\nWhich parameter do you want to process? "))
+    while index < 1 or index > len(parameters):
+        index = int(input("Try again. Which parameter do you want to process? "))
+
+    rel_arr = rel_data.iloc[:,index-1].to_numpy()
 
     plate_cols = 24
     plate_rows = 16
