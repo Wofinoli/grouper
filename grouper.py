@@ -207,6 +207,10 @@ def process_clean(clean, filepath, plate):
 
     filepath = filepath[:-4] + ".txt"
     with open(filepath, "w") as text_file:
+        name = filepath.split("/")
+        name = "{} {}".format(name[-2], name[-1])[:-4]
+
+        text_file.write("{}\n\n".format(name))
         for group in groups:
             text_file.write("{}\n".format(group))
 
