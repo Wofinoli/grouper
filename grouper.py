@@ -1,16 +1,22 @@
 import pandas as pd
+import numpy as np
+from scipy import stats
 import sys
 import re
 import string
 import os
+import warnings
 
 WELLS = 384
+PLATE_COLS = 24
+PLATE_ROWS = 16
+IGNOREABLE_PARAMETERS = ["Seal Resistance","Sweep VoltagePerCurrent","Sweep disregarded"]
 
 class Group:
 
     def __init__(self, cords, name, mean, dev, err, low, high, median, n):
         self.cords = cords
-        self.name = namme
+        self.name = name
         self.mean = mean
         self.dev = dev
         self.err = err
@@ -21,13 +27,13 @@ class Group:
 
     def __str__(self):
         str = ("{}:\n"
-               "\tName:\t{}"
-               "\tMean:\t{}"
-               "\tDev:\t{}"
-               "\tErr:\t{}"
-               "\tLow:\t{}"
-               "\tHigh:\t{}"
-               "\tMedian:\t{}"
+               "\tName:\t{}\n"
+               "\tMean:\t{}\n"
+               "\tDev:\t{}\n"
+               "\tErr:\t{}\n"
+               "\tMin:\t{}\n"
+               "\tMax:\t{}\n"
+               "\tMedian:\t{}\n"
                "\tN:\t{}").format(
                    self.cords, self.name,
                    self.mean, self.dev,
@@ -58,6 +64,7 @@ def choose_file():
 def get_relevant(filename):
     print("Getting relevant data.")
     nav = pd.read_csv(filename,sep='\t', index_col = 0)
+    nav.replace([np.inf, "-Inf"], np.nan, inplace=True)
 
     index = nav.index
     columns = nav.columns
@@ -83,6 +90,68 @@ def get_relevant(filename):
 
     return nav.loc['A01':, columns[bool_mask]], nav.iloc[0,2:2+num_param], num_sweeps # Parameter selection can probably be improved
 
+def choose_layout():
+    rows = 0
+    cols = 0
+    while rows == 0 or not WELLS % (rows*cols) == 0:
+        print("\nWhat is your group layout?")
+        rows = int(input("How many rows per group? "))
+        while rows < 1 or rows > PLATE_ROWS:
+            rows = int(input("Invalid input. Try again: "))
+        cols = int(input("How many cols per group? "))
+        while cols < 1 or cols > PLATE_COLS:
+            cols = int(input("Invalid input. Try again: "))
+
+    return cols, rows
+
+def process_clean(clean, cols, rows, filepath):
+    num_hor = PLATE_COLS // cols
+    num_ver = PLATE_ROWS // rows
+    groups = []
+
+    for i in range(num_hor):
+        for j in range(num_ver):
+            cords = string.ascii_uppercase[i] + str(j + 1)
+            name = cords # Save name instead of asking for each parameter input("Enter group name: ")
+
+            row_start = rows*j
+            row_end = rows*(j+1)
+            col_start = cols*i
+            col_end = cols*(i+1)
+            group = clean.iloc[row_start:row_end, col_start:col_end].astype('float64')
+            n = np.sum(group.count())
+
+            if not n == cols*rows:
+                print("{} {}".format(filepath, cords))
+
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", category=RuntimeWarning)
+                mean = np.nanmean(group)
+                std = np.nanstd(group, ddof=1) # ddf=1 for Sample STD, ddf=0 for Population STD
+                ste = stats.sem(group, axis=None, nan_policy="omit")
+
+                try:
+                    low = np.nanmin(group)
+                except ValueError:  #raised if 'group' is empty
+                    low = np.NaN
+
+                try:
+                    high = np.nanmax(group)
+                except ValueError:  #raised if 'group' is empty
+                    high = np.NaN
+
+                median = np.nanmedian(group)
+
+            groups.append( Group(
+                cords, name, mean,
+                std, ste, low,
+                high, median, n))
+
+    filepath = filepath[:-4] + ".txt"
+    with open(filepath, "w") as text_file:
+        for group in groups:
+            text_file.write("{}\n".format(group))
+
 def main():
 
     # Choose file
@@ -91,56 +160,29 @@ def main():
 
     os.makedirs(os.path.dirname("./output/"), exist_ok=True)
 
-    # Choose plate layout
-    plate_options = [(24,16)]
-    for i, options in enumerate(plate_options, start=1):
-        print("({}) {} columns, {} rows".format(i, options[0], options[1]))
+    row_names = list(string.ascii_uppercase[:PLATE_ROWS])
 
-    option = int(input("What is your plate layout? " ))
-    while option < 1 or option > len(plate_options):
-        option = int(input("That's not an option. Try again: "))
-
-    plate_cols, plate_rows = plate_options[option-1][0], plate_options[option-1][1]
-
-    row_names = list(string.ascii_uppercase[:plate_rows])
-
-    if not plate_cols * plate_rows == WELLS:
-        sys.exit("The number of columns and rows must multiply to 384.")
+    group_cols, group_rows = choose_layout()
 
     # Create directories for each parameter
     path = "./output/" + filename[:-4] + "/"
     for index, param in enumerate(parameters, start=0):
         param = param.replace("/", "Per")
+        if param in IGNOREABLE_PARAMETERS:
+            print("Skipping {}". format(param))
+            continue
+
+        print("Processing {}".format(param))
         param_path = path + param + "/"
         if not os.path.isdir(param_path):
             os.makedirs(param_path, exist_ok=True);
 
         for sweep in range(1, num_sweeps+1):
-            filepath = param_path + "/Sweep{:03}.csv".format(sweep)
+            filepath = param_path + "Sweep{:03}.csv".format(sweep)
             rel_arr = rel_data.iloc[:,len(parameters)*(sweep-1) + (index-1)].to_numpy()
-            clean = pd.DataFrame(data = rel_arr.reshape(plate_rows, plate_cols,order='F'), index=row_names, columns=range(1,plate_cols+1))
+            clean = pd.DataFrame(data = rel_arr.reshape(PLATE_ROWS, PLATE_COLS,order='F'), index=row_names, columns=range(1,PLATE_COLS+1))
 
             clean.to_csv(filepath)
-
-    # Choose sweep
-#    sweep = int(input("\nThere are {} sweeps. Which sweep do you want to process? ".format(num_sweeps)))
-#    while sweep < 1 or sweep > num_sweeps:
-#         sweep = int(input("Try again. Which sweep do you want to process? "))
-#    filename = filename[:-4] + "_Sweep{:03}".format(sweep)
-#
-#    # Choose parameter
-#    for i, param in enumerate(parameters, start=1):
-#        print("({}) {}".format(i, param))
-#
-#    index = int(input("\nWhich parameter do you want to process? "))
-#    while index < 1 or index > len(parameters):
-#        index = int(input("Try again. Which parameter do you want to process? "))
-#    filename += "_{}".format(parameters[index-1])
-#
-#    rel_arr = rel_data.iloc[:,len(parameters)*(sweep-1) + (index-1)].to_numpy()
-#
-#    clean = pd.DataFrame(data = rel_arr.reshape(plate_rows, plate_cols,order='F'), index=row_names, columns=range(1,plate_cols+1))
-#
-#    clean.to_csv("./output/clean_" + filename + ".csv")
+            process_clean(clean, group_cols, group_rows, filepath)
 
 main()
