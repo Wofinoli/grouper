@@ -14,9 +14,10 @@ IGNOREABLE_PARAMETERS = ["Seal Resistance","Sweep VoltagePerCurrent","Sweep disr
 
 class Plate:
 
-    def __init__(self, cols, rows):
+    def __init__(self):
+        self.cols, self.rows = Plate.choose_layout()
         self.group_names = {}
-        self.num_groups = WELLS // (cols * rows)
+        self.num_groups = WELLS // (self.cols * self.rows)
         self.parameters = []
         self.param_frames = {}
 
@@ -43,6 +44,31 @@ class Plate:
 
     def get_param_frame(self, param):
         return self.param_frames[param]
+
+    def choose_layout():
+        rows = 0
+        cols = 0
+        while True:
+            print("\nWhat is your group layout?")
+            rows = int_input("How many rows per group? ")
+
+            while rows < 1 or rows > PLATE_ROWS:
+                rows = int_input("Invalid input. Try again: ")
+
+            cols = int_input("How many cols per group? ")
+            while cols < 1 or cols > PLATE_COLS:
+                cols = int_input("Invalid input. Try again: ")
+                
+            if WELLS % (rows*cols) == 0:
+                break
+            else:
+                print("\nThat combination is not valid, please try again.")
+
+        return cols, rows
+
+    def get_frames(self):
+        return self.param_frames.keys()
+
 
 class Group:
 
@@ -74,6 +100,16 @@ class Group:
                    self.n)
         return str
 
+def int_input(msg):
+    val = input(msg)
+    while True:
+        try:
+            val = int(val)
+        except:
+            val = input("Please enter a number: ")
+            continue
+        break
+    return val
 
 def choose_file():
     csv_files = [name for name in os.listdir("./input/") if name.endswith(".csv")]
@@ -83,9 +119,9 @@ def choose_file():
     for i, name in enumerate(csv_files, start=1):
         print( "({}) {}".format(i, name) )
 
-    index = int(input("Which file do you want to process? "))
+    index = int_input("Which file do you want to process? ")
     while index < 1 or index > len(csv_files):
-        index = int(input("Try again. Which file do you want to process? "))
+        index = int_input("Try again. Which file do you want to process? ")
 
     return csv_files[index-1]
 
@@ -122,21 +158,9 @@ def get_relevant(filename):
 
     return nav.loc['A01':, columns[bool_mask]], nav.iloc[0,2:2+num_param], num_sweeps # Parameter selection can probably be improved
 
-def choose_layout():
-    rows = 0
-    cols = 0
-    while rows == 0 or not WELLS % (rows*cols) == 0:
-        print("\nWhat is your group layout?")
-        rows = int(input("How many rows per group? "))
-        while rows < 1 or rows > PLATE_ROWS:
-            rows = int(input("Invalid input. Try again: "))
-        cols = int(input("How many cols per group? "))
-        while cols < 1 or cols > PLATE_COLS:
-            cols = int(input("Invalid input. Try again: "))
-
-    return cols, rows
-
-def process_clean(clean, cols, rows, filepath, plate):
+def process_clean(clean, filepath, plate):
+    cols = plate.cols
+    rows = plate.rows
     num_hor = PLATE_COLS // cols
     num_ver = PLATE_ROWS // rows
     groups = []
@@ -186,8 +210,7 @@ def process_clean(clean, cols, rows, filepath, plate):
         for group in groups:
             text_file.write("{}\n".format(group))
 
-def main():
-
+def process_file(plate):
     # Choose file
     filename = choose_file()
     rel_data, parameters, num_sweeps = get_relevant("./input/" + filename)
@@ -195,10 +218,6 @@ def main():
     os.makedirs(os.path.dirname("./output/"), exist_ok=True)
 
     row_names = list(string.ascii_uppercase[:PLATE_ROWS])
-
-    group_cols, group_rows = choose_layout()
-
-    plate = Plate(group_cols, group_rows)
 
     # Create directories for each parameter
     path = "./output/" + filename[:-4] + "/"
@@ -219,9 +238,16 @@ def main():
             filepath = param_path + "Sweep{:03}.csv".format(sweep)
             rel_arr = rel_data.iloc[:,len(parameters)*(sweep-1) + (index-1)].to_numpy()
             clean = pd.DataFrame(data = rel_arr.reshape(PLATE_ROWS, PLATE_COLS,order='F'), index=row_names, columns=range(1,PLATE_COLS+1))
-            plate.add_param_frame(param, clean)
+            key = "{}{:03}".format(param, sweep)
+            plate.add_param_frame(key, clean)
 
             clean.to_csv(filepath)
-            process_clean(clean, group_cols, group_rows, filepath, plate)
+            process_clean(clean, filepath, plate)
+
+
+def main():
+    plate = Plate()
+    
+    process_file(plate)
 
 main()
