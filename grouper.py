@@ -143,9 +143,6 @@ def process_clean(clean, cols, rows, filepath, plate):
             group = clean.iloc[row_start:row_end, col_start:col_end].astype('float64')
             n = np.sum(group.count())
 
-            if not n == cols*rows:
-                print("{} {}".format(filepath, cords))
-
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore", category=RuntimeWarning)
                 mean = np.nanmean(group)
