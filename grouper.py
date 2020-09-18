@@ -6,6 +6,36 @@ import os
 
 WELLS = 384
 
+class Group:
+
+    def __init__(self, cords, name, mean, dev, err, low, high, median, n):
+        self.cords = cords
+        self.name = namme
+        self.mean = mean
+        self.dev = dev
+        self.err = err
+        self.low = low
+        self.high = high
+        self.median = median
+        self.n = n
+
+    def __str__(self):
+        str = ("{}:\n"
+               "\tName:\t{}"
+               "\tMean:\t{}"
+               "\tDev:\t{}"
+               "\tErr:\t{}"
+               "\tLow:\t{}"
+               "\tHigh:\t{}"
+               "\tMedian:\t{}"
+               "\tN:\t{}").format(
+                   self.cords, self.name,
+                   self.mean, self.dev,
+                   self.err, self.low,
+                   self.high, self.median,
+                   self.n)
+        return str
+
 
 def choose_file():
     csv_files = [name for name in os.listdir("./input/") if name.endswith(".csv")]
