@@ -12,6 +12,23 @@ PLATE_COLS = 24
 PLATE_ROWS = 16
 IGNOREABLE_PARAMETERS = ["Seal Resistance","Sweep VoltagePerCurrent","Sweep disregarded"]
 
+class Plate:
+
+    def __init__(self, cols, rows):
+        self.group_names = {}
+        self.num_groups = WELLS // (cols * rows)
+
+    def is_named(self):
+        if len(self.group_names) == self.num_groups:
+            return True
+        return False
+
+    def add_name(self, cord, name):
+        self.group_names[cord] = name
+
+    def get_name(self, cord):
+        return self.group_names[cord]
+
 class Group:
 
     def __init__(self, cords, name, mean, dev, err, low, high, median, n):
@@ -104,7 +121,7 @@ def choose_layout():
 
     return cols, rows
 
-def process_clean(clean, cols, rows, filepath):
+def process_clean(clean, cols, rows, filepath, plate):
     num_hor = PLATE_COLS // cols
     num_ver = PLATE_ROWS // rows
     groups = []
@@ -112,7 +129,12 @@ def process_clean(clean, cols, rows, filepath):
     for i in range(num_hor):
         for j in range(num_ver):
             cords = string.ascii_uppercase[i] + str(j + 1)
-            name = cords # Save name instead of asking for each parameter input("Enter group name: ")
+            # name = cords # Save name instead of asking for each parameter input("Enter group name: ")
+            if not plate.is_named():
+                name = input("Enter the name for group {}: ".format(cords))
+                plate.add_name(cords, name)
+            else:
+                name = plate.get_name(cords)
 
             row_start = rows*j
             row_end = rows*(j+1)
@@ -164,6 +186,8 @@ def main():
 
     group_cols, group_rows = choose_layout()
 
+    plate = Plate(group_cols, group_rows)
+
     # Create directories for each parameter
     path = "./output/" + filename[:-4] + "/"
     for index, param in enumerate(parameters, start=0):
@@ -183,6 +207,6 @@ def main():
             clean = pd.DataFrame(data = rel_arr.reshape(PLATE_ROWS, PLATE_COLS,order='F'), index=row_names, columns=range(1,PLATE_COLS+1))
 
             clean.to_csv(filepath)
-            process_clean(clean, group_cols, group_rows, filepath)
+            process_clean(clean, group_cols, group_rows, filepath, plate)
 
 main()
