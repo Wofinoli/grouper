@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 from scipy import stats
+from io import StringIO
 import sys
 import re
 import string
@@ -10,7 +11,7 @@ import warnings
 WELLS = 384
 PLATE_COLS = 24
 PLATE_ROWS = 16
-IGNOREABLE_PARAMETERS = ["Seal Resistance","Sweep VoltagePerCurrent","Sweep disregarded"]
+IGNOREABLE_PARAMETERS = ["Seal Resistance","Sweep disregarded"]
 
 class Plate:
 
@@ -20,6 +21,7 @@ class Plate:
         self.num_groups = WELLS // (self.cols * self.rows)
         self.parameters = []
         self.param_frames = {}
+        self.potentials = []
 
     def set_sweeps(self, sweeps):
         self.num_sweeps = sweeps
@@ -47,6 +49,12 @@ class Plate:
 
     def get_param_frame(self, param):
         return self.param_frames[param]
+
+    def append_potential(self, potential):
+        self.potentials.append(potential)
+
+    def get_potentials(self):
+        return self.potentials
 
     def choose_layout():
         rows = 0
@@ -89,15 +97,15 @@ class Group:
         self.n = n
 
     def __str__(self):
-        str = ("{}:"
-               "  Name: {}\t"
-               "Mean: {}\t"
-               "Dev: {}\t"
-               "Err: {}\t"
-               "Min: {}\t"
-               "Max: {}\t"
-               "Median: {}\t"
-               "N: {}\t").format(
+        str = ("{}\t"
+               "{}\t"
+               "{}\t"
+               "{}\t"
+               "{}\t"
+               "{}\t"
+               "{}\t"
+               "{}\t"
+               "{}").format(
                    self.cords, self.name,
                    self.mean, self.dev,
                    self.err, self.low,
@@ -150,7 +158,7 @@ def get_relevant(filename):
     for column in columns:
         if re.match("Sweep \d{3}\.\d", column):
             bool_mask.append(True)
-            param = int(column[-1])
+            param = int(column.split(".")[-1]) 
             if param > temp:
                 temp = param
                 if num_sweeps == 1:
@@ -213,13 +221,13 @@ def process_clean(clean, filepath, plate):
                 std, ste, low,
                 high, median, n))
 
-    with open(filepath, "w") as text_file:
-        name = filepath.split("/")
-        name = "{} {}".format(name[-2], name[-1])[:-4]
-
-        text_file.write("{}\n\n".format(name))
-        for group in groups:
-            text_file.write("{}\n".format(group))
+    col_names = ["Name", "Mean", "Std. Dev", "Std. Err", "Min", "Max", "Median", "N"]
+    out_frame = pd.DataFrame(columns = col_names)
+    col_names = "\t".join(col_names)
+    for group in groups:
+        data = StringIO("""{}\n{}""".format(col_names, group))
+        out_frame = out_frame.append(pd.read_csv(data, sep="\t"))
+    out_frame.to_csv(filepath[:-4] + "_stats.csv")
 
 def process_file(plate):
     # Choose file
@@ -239,9 +247,15 @@ def process_file(plate):
             print("Skipping {}". format(param))
             continue
 
+        print("Processing {}".format(param))
+
+        if param == "Sweep VoltagePerCurrent":
+            for sweep in range(1, num_sweeps+1):
+                plate.append_potential(rel_data.iloc[2,len(parameters)*(sweep-1) + index])
+            continue
+
         plate.add_param(param)
 
-        print("Processing {}".format(param))
         param_path = path + param + "/"
         if not os.path.isdir(param_path):
             os.makedirs(param_path, exist_ok=True);
@@ -261,6 +275,5 @@ def main():
     plate = Plate()
     
     process_file(plate)
-    print(plate.get_frames())
 
 main()
