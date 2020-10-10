@@ -21,6 +21,9 @@ class Plate:
         self.parameters = []
         self.param_frames = {}
 
+    def set_sweeps(self, sweeps):
+        self.num_sweeps = sweeps
+
     def is_named(self):
         if len(self.group_names) == self.num_groups:
             return True
@@ -55,7 +58,7 @@ class Plate:
             while rows < 1 or rows > PLATE_ROWS:
                 rows = int_input("Invalid input. Try again: ")
 
-            cols = int_input("How many cols per group? ")
+            cols = int_input("How many columns per group? ")
             while cols < 1 or cols > PLATE_COLS:
                 cols = int_input("Invalid input. Try again: ")
                 
@@ -72,8 +75,10 @@ class Plate:
 
 class Group:
 
-    def __init__(self, cords, name, mean, dev, err, low, high, median, n):
+    def __init__(self, cords, param, sweep, name, mean, dev, err, low, high, median, n):
         self.cords = cords
+        self.param = param
+        self.sweep = sweep
         self.name = name
         self.mean = mean
         self.dev = dev
@@ -84,15 +89,15 @@ class Group:
         self.n = n
 
     def __str__(self):
-        str = ("{}:\n"
-               "\tName:\t{}\n"
-               "\tMean:\t{}\n"
-               "\tDev:\t{}\n"
-               "\tErr:\t{}\n"
-               "\tMin:\t{}\n"
-               "\tMax:\t{}\n"
-               "\tMedian:\t{}\n"
-               "\tN:\t{}").format(
+        str = ("{}:"
+               "  Name: {}\t"
+               "Mean: {}\t"
+               "Dev: {}\t"
+               "Err: {}\t"
+               "Min: {}\t"
+               "Max: {}\t"
+               "Median: {}\t"
+               "N: {}\t").format(
                    self.cords, self.name,
                    self.mean, self.dev,
                    self.err, self.low,
@@ -132,7 +137,7 @@ def choose_file():
 def get_relevant(filename):
     print("Getting relevant data.")
     nav = pd.read_csv(filename,sep='\t', index_col = 0)
-    nav.replace([np.inf, "-Inf"], np.nan, inplace=True)
+    nav.replace([np.inf, "-Inf", "Inf"], np.nan, inplace=True)
 
     index = nav.index
     columns = nav.columns
@@ -164,6 +169,9 @@ def process_clean(clean, filepath, plate):
     num_hor = PLATE_COLS // cols
     num_ver = PLATE_ROWS // rows
     groups = []
+    filepath = filepath[:-4] + ".txt"
+    param = filepath.split("/")[-2]
+    sweep = int(filepath[-7:-4])
 
     for i in range(num_hor):
         for j in range(num_ver):
@@ -201,11 +209,10 @@ def process_clean(clean, filepath, plate):
                 median = np.nanmedian(group)
 
             groups.append( Group(
-                cords, name, mean,
+                cords, param, sweep, name, mean,
                 std, ste, low,
                 high, median, n))
 
-    filepath = filepath[:-4] + ".txt"
     with open(filepath, "w") as text_file:
         name = filepath.split("/")
         name = "{} {}".format(name[-2], name[-1])[:-4]
@@ -218,6 +225,7 @@ def process_file(plate):
     # Choose file
     filename = choose_file()
     rel_data, parameters, num_sweeps = get_relevant("./input/" + filename)
+    plate.set_sweeps(num_sweeps)
 
     os.makedirs(os.path.dirname("./output/"), exist_ok=True)
 
@@ -253,5 +261,6 @@ def main():
     plate = Plate()
     
     process_file(plate)
+    print(plate.get_frames())
 
 main()
