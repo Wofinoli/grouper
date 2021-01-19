@@ -15,47 +15,7 @@ IGNOREABLE_PARAMETERS = ["Seal Resistance","Sweep disregarded"]
 
 class Plate:
 
-    def __init__(self):
-        self.cols, self.rows = Plate.choose_layout()
-        self.group_names = {}
-        self.num_groups = WELLS // (self.cols * self.rows)
-        self.parameters = []
-        self.param_frames = {}
-        self.potentials = []
-
-    def set_sweeps(self, sweeps):
-        self.num_sweeps = sweeps
-
-    def is_named(self):
-        if len(self.group_names) == self.num_groups:
-            return True
-        return False
-
-    def add_name(self, cord, name):
-        self.group_names[cord] = name
-
-    def get_name(self, cord):
-        return self.group_names[cord]
-
-    def add_param(self, param):
-        if not param in self.parameters:
-            self.parameters.append(param)
-
-    def get_parameters(self):
-        return self.parameters
-
-    def add_param_frame(self, param, frame):
-        self.param_frames[param] = frame
-
-    def get_param_frame(self, param):
-        return self.param_frames[param]
-
-    def append_potential(self, potential):
-        self.potentials.append(potential)
-
-    def get_potentials(self):
-        return self.potentials
-
+    @staticmethod
     def choose_layout():
         rows = 0
         cols = 0
@@ -76,10 +36,6 @@ class Plate:
                 print("\nThat combination is not valid, please try again.")
 
         return cols, rows
-
-    def get_frames(self):
-        return self.param_frames.keys()
-
 
 class Group:
 
@@ -156,7 +112,7 @@ def get_relevant(filename):
 
     temp = 0
     for column in columns:
-        if re.match("Sweep \d{3}\.\d", column):
+        if re.match(r"Sweep \d{3}\.\d", column):
             bool_mask.append(True)
             param = int(column.split(".")[-1]) 
             if param > temp:
@@ -258,13 +214,14 @@ def process_file(plate):
 
         param_path = path + param + "/"
         if not os.path.isdir(param_path):
-            os.makedirs(param_path, exist_ok=True);
+            os.makedirs(param_path, exist_ok=True)
 
         for sweep in range(1, num_sweeps+1):
             filepath = param_path + "Sweep{:03}.csv".format(sweep)
             rel_arr = rel_data.iloc[:,len(parameters)*(sweep-1) + (index-1)].to_numpy()
             clean = pd.DataFrame(data = rel_arr.reshape(PLATE_ROWS, PLATE_COLS,order='F'), index=row_names, columns=range(1,PLATE_COLS+1))
             key = "{}{:03}".format(param, sweep)
+            print(clean.iloc[0,0], key)
             plate.add_param_frame(key, clean)
 
             clean.to_csv(filepath)
