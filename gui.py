@@ -27,6 +27,7 @@ class GUI:
         self.active_group = None
         self.row = 0
         self.col = 0
+        self.group_colors = {}
 
     def run(self):
         plate_win = None#self.make_plate_win()      
@@ -103,11 +104,14 @@ class GUI:
                 plate_win = None
                 plot_win = self.make_plot_win()
                 self.draw_plot()
+                self.finalize_groups()
 
-            if event == 'Quit':
+            if event == 'excel':
                 plot_win.close()
                 plot_win = None
+                self.plate.statistics = data_process.get_statistics(self.plate.accepted_fits)
                 self.to_excel()
+
 
             if event in ['Accept', 'Reject', 'Next', 'Previous']:
                 plt.close()
@@ -158,8 +162,9 @@ class GUI:
         return sg.Window('Choose file', layout, finalize = True)
 
     def make_plot_win(self):
-        layout = [[sg.Button("Accept"), sg.Button("Reject"), sg.Button("Quit")],
-                  [sg.Button("Previous"), sg.Button("Next")]]
+        layout = [[sg.Button("Accept"), sg.Button("Reject")],
+                  [sg.Button("Previous"), sg.Button("Next")],
+                  [sg.Button("Write to Excel", key="excel")],]
 
         return sg.Window('Plots', layout, finalize = True)
 
@@ -178,25 +183,26 @@ class GUI:
         
         index = 1
         write_col = 1
-        ydata = []
+        self.ydata = []
         self.title = row_names[self.row] + "{:02d}".format(self.col + 1)
         for sweep in sodium_sweeps:
-            ydata.append(sweep.iloc[self.row,self.col])
+            self.ydata.append(sweep.iloc[self.row,self.col])
            
         try:
             bounds = ((65,-np.inf,-np.inf,-np.inf),(85,np.inf,np.inf,np.inf))
-            self.popt, pcov = curve_fit(data_process.func_IV_NA, potentials, ydata, p0=[70,0.4,0.6,1], bounds=bounds, maxfev=100000)
+            self.popt, pcov = curve_fit(data_process.func_IV_NA, potentials, self.ydata, p0=[70,0.4,0.6,1], bounds=bounds, maxfev=100000)
         except:
             print("Fit failed for " + self.title)
+            index = 0 if pd.isnull(self.plate.failed.index.max()) else self.plate.failed.index.max() + 1
+            self.plate.failed.loc[index] = self.title
             plt.close()
             self.next_cell()
             self.draw_plot()
             return
-            #failed.loc[0 if pd.isnull(failed.index.max()) else failed.index.max() + 1] = title
     
         label = 'fit: $v_{rev}=%5.3f, g_{max}=%5.3f, v_{0.5}=%5.3f, v_{slope}=%5.3f$' % tuple(self.popt)
         ax.clear()
-        ax.plot(potentials, ydata, 'b.', label="data")
+        ax.plot(potentials, self.ydata, 'b.', label="data")
         xrange = np.arange(min(potentials), max(potentials), 0.01)
         ax.plot(xrange, data_process.func_IV_NA(xrange, *self.popt), 'r-', label=label)
         ax.grid()
@@ -249,8 +255,8 @@ class GUI:
         index = 0 if pd.isnull(self.plate.accepted_fits.index.max()) else self.plate.accepted_fits.index.max() + 1
         self.plate.accepted_fits.loc[index, 'Cell'] =  self.title
         self.plate.accepted_fits.loc[index, 'v_rev':'v_slope'] = self.popt
-        print(self.plate.accepted_fits.shape)
-
+        self.plate.source[self.title] = self.ydata
+        
     def get_button_size(self):
         height = self.height - self.padding - self.offset
         width = self.width - self.padding - self.offset
@@ -315,6 +321,20 @@ class GUI:
         self.groups[name] = new_group
         self.active_group = new_group
 
+    def finalize_groups(self):
+        for name, group in self.groups.items():
+            coords = group.coordinates
+            color = group.color
+
+            for coord in coords:
+                start_row, start_col = coord[0]
+                end_row, end_col = coord[1]
+
+                for row in range(start_row, end_row+1):
+                    for col in range(start_col, end_col+1):
+                        self.group_colors[(row,col)] = color
+
+
     def to_excel(self):
         last_sep = self.filename.rindex("/") + 1
         filename = "output/RESULT_" + self.filename[last_sep:-4] + ".xlsx"
@@ -323,11 +343,42 @@ class GUI:
             workbook = writer.book
             worksheet = workbook.add_worksheet(name)
             writer.sheets[name] = worksheet
+
             self.plate.accepted_fits.to_excel(writer,sheet_name=name,startrow=0 , startcol=0)
-            #statistics.to_excel(writer,sheet_name=name,startrow=0, startcol=accepted_fits.shape[1]+2)
-            #failed.to_excel(writer,sheet_name=name, startrow = statistics.shape[0]+2, startcol = accepted_fits.shape[1]+2)
-            #
-            #source_sheet = workbook.add_worksheet('source')
-            #writer.sheets['source'] = source_sheet
-            #source.to_excel(writer, sheet_name='source', startrow = 0, startcol=0)
+            self.format_sheet(writer, workbook, worksheet, 0, 0, self.plate.accepted_fits)
+
+            self.plate.statistics.to_excel(writer,sheet_name=name,startrow=0, startcol=self.plate.accepted_fits.shape[1]+2)
+            self.plate.failed.to_excel(writer,sheet_name=name, startrow = self.plate.statistics.shape[0]+2, startcol = self.plate.accepted_fits.shape[1]+2)
+            
+            source_sheet = workbook.add_worksheet('source')
+            writer.sheets['source'] = source_sheet
+            self.plate.source.to_excel(writer, sheet_name='source', startrow = 0, startcol=0)
+
+            writer.save()
+
+    def format_sheet(self, writer, workbook, worksheet, startrow, startcol, frame):
+            for index, cell in enumerate(frame['Cell']):
+                coords = self.cell_to_pair(cell)
+                if coords in self.group_colors:
+                    color = self.group_colors[coords]
+                    cell_format = workbook.add_format({'bg_color': color})
+
+                    endcol = frame.shape[1] + startcol
+
+                    worksheet.conditional_format(startrow + index + 1, startcol + 1, startrow + index + 1, endcol,
+                            {'type': 'cell',
+                             'criteria': '!=',
+                             'value': '""',
+                             'format': cell_format})
+
+    def cell_to_pair(self, cell):
+        row = ord(cell[0]) - ord('A')
+        col = int(cell[-2:]) - 1
+
+        return (row, col)
+
+    
+
+
+
 

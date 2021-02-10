@@ -27,6 +27,7 @@ class Plate():
         self.accepted_fits = pd.DataFrame(columns=["Cell", "v_rev","g_max","v_half","v_slope"])
         self.failed = pd.DataFrame(columns=["Failed"])
         self.statistics = pd.DataFrame(index=np.arange(0,self.accepted_fits.shape[1]-1), columns=["Variable","Mean","Median","Std. Dev","Std. Err","Max","Min","N"])
+        self.group_fits = {}
 
     def read_file(self):
         raw = pd.read_csv(self.filename, sep='\t', index_col=0)
@@ -81,9 +82,12 @@ class Plate():
 
         self.source = pd.DataFrame(self.potentials, columns=["Potential"])
 
-    @staticmethod
-    def get_statistics(frame):
-        statistics = pd.DataFrame()
+     
+def func_IV_NA(v, vrev, gmax, vhalf, vslope): # IV
+    return (v - vrev) * gmax/(1 + np.exp((vhalf - v)/vslope))
+
+def get_statistics(frame):
+        statistics = pd.DataFrame(index=np.arange(0,frame.shape[1]-1), columns=["Variable","Mean","Median","Std. Dev","Std. Err","Max","Min","N"])
         index = 0
         for label, content in frame.items():
             if(label == "Cell"):
@@ -101,6 +105,4 @@ class Plate():
             
         return statistics
 
- 
-def func_IV_NA(v, vrev, gmax, vhalf, vslope): # IV
-    return (v - vrev) * gmax/(1 + np.exp((vhalf - v)/vslope))
+
