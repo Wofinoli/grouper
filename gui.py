@@ -1,7 +1,14 @@
 import PySimpleGUI as sg
+import pandas as pd
+import numpy as np
+from scipy.optimize import curve_fit
+from scipy import stats
+import matplotlib.pyplot as plt
 import string
-import group
 import math
+
+import group
+import data_process
 
 class GUI:
 
@@ -18,12 +25,15 @@ class GUI:
         self.button_size = self.get_button_size()
         self.groups = {}
         self.active_group = None
+        self.row = 0
+        self.col = 0
 
     def run(self):
         plate_win = None#self.make_plate_win()      
         choose_group_win = None
         group_win = None
         start_win = self.make_start_win()
+        plot_win = None
 
         hasSelected = False
         start_row, start_col, end_row, end_col = -1,-1,-1,-1
@@ -43,6 +53,8 @@ class GUI:
                     choose_group_win = None
                 elif window == start_win:
                     start_win = None
+                elif window == plot_win:
+                    plot_win = None
 
             if self.active_group and event == "graph" and not hasSelected:
                 start_row, start_col = self.cords_to_tile(values['graph'])
@@ -79,11 +91,35 @@ class GUI:
 
             if event == 'file_choose':
                 self.filename = values['file_choose']
+                self.plate = data_process.Plate(self.cols, self.rows, self.filename)
                 start_win.close()
                 start_win = None
                 plate_win = self.make_plate_win()
                 self.graph = plate_win['graph']
                 self.buttons = self.draw_buttons()
+
+            if event == 'Finalize groups':
+                plate_win.close()
+                plate_win = None
+                plot_win = self.make_plot_win()
+                self.draw_plot()
+
+            if event == 'Quit':
+                plot_win.close()
+                plot_win = None
+                self.to_excel()
+
+            if event in ['Accept', 'Reject', 'Next', 'Previous']:
+                plt.close()
+                if event == 'Previous':
+                    self.prev_cell()
+                else:
+                    if event == 'Accept':
+                        self.accept_cell()
+
+                    self.next_cell()
+
+                self.draw_plot()
 
     def make_plate_win(self):
         menu_def = [['Groups', ['New group', 'Edit group', 'Finalize groups']],
@@ -94,6 +130,10 @@ class GUI:
 
         return sg.Window('Plate', layout, finalize=True)
 
+    def make_plate(self):
+        graph = sg.Graph(canvas_size=self.size, graph_bottom_left=(0,0), graph_top_right=self.size, background_color='white', key='graph',
+                            enable_events=True, drag_submits=True)
+        return graph
 
     def make_group_win(self):
         default_name = "Group{:02d}".format(1+len(self.groups))
@@ -117,10 +157,99 @@ class GUI:
 
         return sg.Window('Choose file', layout, finalize = True)
 
-    def make_plate(self):
-        graph = sg.Graph(canvas_size=self.size, graph_bottom_left=(0,0), graph_top_right=self.size, background_color='white', key='graph',
-                            enable_events=True, drag_submits=True)
-        return graph
+    def make_plot_win(self):
+        layout = [[sg.Button("Accept"), sg.Button("Reject"), sg.Button("Quit")],
+                  [sg.Button("Previous"), sg.Button("Next")]]
+
+        return sg.Window('Plots', layout, finalize = True)
+
+    def draw_plot(self):
+        plate = self.plate
+        sodium_sweeps = self.plate.sodium_sweeps
+        potentials = self.plate.potentials
+        row_names = self.plate.row_names
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        plt.ion()
+
+        fig.show()
+        fig.canvas.draw()
+        
+        index = 1
+        write_col = 1
+        ydata = []
+        self.title = row_names[self.row] + "{:02d}".format(self.col + 1)
+        for sweep in sodium_sweeps:
+            ydata.append(sweep.iloc[self.row,self.col])
+           
+        try:
+            bounds = ((65,-np.inf,-np.inf,-np.inf),(85,np.inf,np.inf,np.inf))
+            self.popt, pcov = curve_fit(data_process.func_IV_NA, potentials, ydata, p0=[70,0.4,0.6,1], bounds=bounds, maxfev=100000)
+        except:
+            print("Fit failed for " + self.title)
+            plt.close()
+            self.next_cell()
+            self.draw_plot()
+            return
+            #failed.loc[0 if pd.isnull(failed.index.max()) else failed.index.max() + 1] = title
+    
+        label = 'fit: $v_{rev}=%5.3f, g_{max}=%5.3f, v_{0.5}=%5.3f, v_{slope}=%5.3f$' % tuple(self.popt)
+        ax.clear()
+        ax.plot(potentials, ydata, 'b.', label="data")
+        xrange = np.arange(min(potentials), max(potentials), 0.01)
+        ax.plot(xrange, data_process.func_IV_NA(xrange, *self.popt), 'r-', label=label)
+        ax.grid()
+        ax.legend()
+    
+        ax.set_title(self.title)
+        ax.set_xlabel("Potential (mV)")
+        ax.set_ylabel("Current (pA)")
+        
+        fig.canvas.draw()
+       # choice = await wait_for_choice(accept, reject, quit)
+       # 
+       # if(choice == "Accept"):
+       #     accepted_fits.loc[index,'Cell'] = title
+       #     accepted_fits.loc[index,'v_rev':'v_slope'] = popt
+       #     index += 1
+       #     
+       #     ax2.plot(potentials, ydata, 'b.', label="data")
+       #     ax2.plot(xrange, func_IV_NA(xrange, *popt), 'g-', label=label)
+       #     
+       #     source[title] = ydata
+       # elif(choice == "Reject"):
+       #     ax2.plot(potentials, ydata, 'b.', label="data")
+       #     ax2.plot(xrange, func_IV_NA(xrange, *popt), 'r-', label=label)
+       # elif(choice == "Quit"):
+       #     done = True
+       #     break
+
+    def next_cell(self):
+        if self.row == self.rows - 1 and self.col == self.cols - 1:
+            return
+
+        if self.col < self.cols - 1:
+            self.col += 1
+        else:
+            self.col = 0
+            self.row += 1
+
+    def prev_cell(self):
+        if self.row == 0 and self.col == 0:
+            return
+
+        if self.col > 0:
+            self.col -= 1
+        else:
+            self.col = self.cols - 1
+            self.row = self.row - 1
+         
+    def accept_cell(self):
+        index = 0 if pd.isnull(self.plate.accepted_fits.index.max()) else self.plate.accepted_fits.index.max() + 1
+        self.plate.accepted_fits.loc[index, 'Cell'] =  self.title
+        self.plate.accepted_fits.loc[index, 'v_rev':'v_slope'] = self.popt
+        print(self.plate.accepted_fits.shape)
 
     def get_button_size(self):
         height = self.height - self.padding - self.offset
@@ -185,3 +314,20 @@ class GUI:
         new_group = group.Group(color, name)
         self.groups[name] = new_group
         self.active_group = new_group
+
+    def to_excel(self):
+        last_sep = self.filename.rindex("/") + 1
+        filename = "output/RESULT_" + self.filename[last_sep:-4] + ".xlsx"
+        with pd.ExcelWriter(filename) as writer: 
+            name = "Result"
+            workbook = writer.book
+            worksheet = workbook.add_worksheet(name)
+            writer.sheets[name] = worksheet
+            self.plate.accepted_fits.to_excel(writer,sheet_name=name,startrow=0 , startcol=0)
+            #statistics.to_excel(writer,sheet_name=name,startrow=0, startcol=accepted_fits.shape[1]+2)
+            #failed.to_excel(writer,sheet_name=name, startrow = statistics.shape[0]+2, startcol = accepted_fits.shape[1]+2)
+            #
+            #source_sheet = workbook.add_worksheet('source')
+            #writer.sheets['source'] = source_sheet
+            #source.to_excel(writer, sheet_name='source', startrow = 0, startcol=0)
+
