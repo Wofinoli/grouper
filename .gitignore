@@ -1,6 +1,7 @@
 .DS_Store
 *.csv
-*.ipynb
+*.xlsx
+.ipynb_checkpoints/*
 output/
 input/
 .gitignore
