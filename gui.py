@@ -20,12 +20,10 @@ class GUI:
         self.active_group = None
 
     def run(self):
-        plate_win = self.make_plate_win()      
+        plate_win = None#self.make_plate_win()      
         choose_group_win = None
         group_win = None
-
-        self.graph = plate_win['graph']
-        self.buttons = self.draw_buttons()
+        start_win = self.make_start_win()
 
         hasSelected = False
         start_row, start_col, end_row, end_col = -1,-1,-1,-1
@@ -43,6 +41,8 @@ class GUI:
                     group_win = None
                 elif window == choose_group_win:
                     choose_group_win = None
+                elif window == start_win:
+                    start_win = None
 
             if self.active_group and event == "graph" and not hasSelected:
                 start_row, start_col = self.cords_to_tile(values['graph'])
@@ -77,8 +77,16 @@ class GUI:
                 choose_group_win.close()
                 choose_group_win = None
 
+            if event == 'file_choose':
+                self.filename = values['file_choose']
+                start_win.close()
+                start_win = None
+                plate_win = self.make_plate_win()
+                self.graph = plate_win['graph']
+                self.buttons = self.draw_buttons()
+
     def make_plate_win(self):
-        menu_def = [['Groups', ['New group', 'Edit group']],
+        menu_def = [['Groups', ['New group', 'Edit group', 'Finalize groups']],
                     ['Options',['Close']],]
         layout = [[sg.Menu(menu_def)],      
                [self.make_plate()],      
@@ -102,6 +110,12 @@ class GUI:
                     size=(15,10), select_mode="LISTBOX_SELECT_MODE_SINGLE")]]
 
         return sg.Window('Choose Group', layout, finalize=True)
+
+    def make_start_win(self):
+        layout= [[sg.Text("Choose file",  size=(15,1))],
+                 [sg.In(visible=False, enable_events=True, key='file_choose'), sg.FileBrowse()]]
+
+        return sg.Window('Choose file', layout, finalize = True)
 
     def make_plate(self):
         graph = sg.Graph(canvas_size=self.size, graph_bottom_left=(0,0), graph_top_right=self.size, background_color='white', key='graph',
