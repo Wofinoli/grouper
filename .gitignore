@@ -6,6 +6,9 @@ test.*
 __pycache__/*
 output/
 input/
+build/
+dist/
+*.spec
 .gitignore
 .nosync
 reqs.txt

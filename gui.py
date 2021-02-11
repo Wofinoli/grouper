@@ -1,4 +1,5 @@
 import PySimpleGUI as sg
+import os
 import pandas as pd
 import numpy as np
 from scipy.optimize import curve_fit
@@ -140,7 +141,7 @@ class GUI:
         return graph
 
     def make_group_win(self):
-        default_name = "Group{:02d}".format(1+len(self.groups))
+        default_name = "G{:02d}".format(1+len(self.groups))
         layout = [[sg.Text('New Group')],
                 [sg.Text('Color: '), sg.Input(key='color_in'), sg.ColorChooserButton('Choose color', target='color_in')],
               [sg.Text('Name: '), sg.Input(default_text=default_name, key='group_name')],
@@ -213,23 +214,6 @@ class GUI:
         ax.set_ylabel("Current (pA)")
         
         fig.canvas.draw()
-       # choice = await wait_for_choice(accept, reject, quit)
-       # 
-       # if(choice == "Accept"):
-       #     accepted_fits.loc[index,'Cell'] = title
-       #     accepted_fits.loc[index,'v_rev':'v_slope'] = popt
-       #     index += 1
-       #     
-       #     ax2.plot(potentials, ydata, 'b.', label="data")
-       #     ax2.plot(xrange, func_IV_NA(xrange, *popt), 'g-', label=label)
-       #     
-       #     source[title] = ydata
-       # elif(choice == "Reject"):
-       #     ax2.plot(potentials, ydata, 'b.', label="data")
-       #     ax2.plot(xrange, func_IV_NA(xrange, *popt), 'r-', label=label)
-       # elif(choice == "Quit"):
-       #     done = True
-       #     break
 
     def next_cell(self):
         if self.row == self.rows - 1 and self.col == self.cols - 1:
@@ -253,9 +237,21 @@ class GUI:
          
     def accept_cell(self):
         index = 0 if pd.isnull(self.plate.accepted_fits.index.max()) else self.plate.accepted_fits.index.max() + 1
-        self.plate.accepted_fits.loc[index, 'Cell'] =  self.title
+        title = self.title
+        for name, group in self.groups.items():
+            coords = group.coordinates
+            color = group.color
+
+            for coord in coords:
+                start_row, start_col = coord[0]
+                end_row, end_col = coord[1]
+
+                if self.row >= start_row and self.row <= end_row and self.col >= start_col and self.col <= end_col:
+                    title = name + "_" + title
+
+        self.plate.accepted_fits.loc[index, 'Cell'] =  title
         self.plate.accepted_fits.loc[index, 'v_rev':'v_slope'] = self.popt
-        self.plate.source[self.title] = self.ydata
+        self.plate.source[title] = self.ydata
         
     def get_button_size(self):
         height = self.height - self.padding - self.offset
@@ -337,7 +333,13 @@ class GUI:
 
     def to_excel(self):
         last_sep = self.filename.rindex("/") + 1
-        filename = "output/RESULT_" + self.filename[last_sep:-4] + ".xlsx"
+        path = os.path.join(os.getcwd(), "output")
+        if not os.path.exists(path):
+            os.makedirs(path)
+
+        filename = "RESULT_" + self.filename[last_sep:-4] + ".xlsx"
+        filename = os.path.join(path, filename)
+        print(filename)
         with pd.ExcelWriter(filename) as writer: 
             name = "Result"
             workbook = writer.book
@@ -354,11 +356,13 @@ class GUI:
             writer.sheets['source'] = source_sheet
             self.plate.source.to_excel(writer, sheet_name='source', startrow = 0, startcol=0)
 
+            workbook.close()
             writer.save()
 
     def format_sheet(self, writer, workbook, worksheet, startrow, startcol, frame):
             for index, cell in enumerate(frame['Cell']):
-                coords = self.cell_to_pair(cell)
+                name = cell[-3:]
+                coords = self.cell_to_pair(name)
                 if coords in self.group_colors:
                     color = self.group_colors[coords]
                     cell_format = workbook.add_format({'bg_color': color})
