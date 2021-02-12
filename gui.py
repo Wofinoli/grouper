@@ -160,14 +160,14 @@ class GUI:
         layout= [[sg.Text("Choose file",  size=(15,1))],
                  [sg.In(visible=False, enable_events=True, key='file_choose'), sg.FileBrowse()]]
 
-        return sg.Window('Choose file', layout, finalize = True)
+        return sg.Window('Choose file', layout, size=(200,75), finalize = True)
 
     def make_plot_win(self):
         layout = [[sg.Button("Accept"), sg.Button("Reject")],
                   [sg.Button("Previous"), sg.Button("Next")],
                   [sg.Button("Write to Excel", key="excel")],]
 
-        return sg.Window('Plots', layout, finalize = True)
+        return sg.Window('Plots', layout, size=(200,110), finalize = True)
 
     def draw_plot(self):
         plate = self.plate
@@ -318,7 +318,7 @@ class GUI:
         self.active_group = new_group
 
     def finalize_groups(self):
-        for name, group in self.groups.items():
+        for _, group in self.groups.items():
             coords = group.coordinates
             color = group.color
 
@@ -357,7 +357,6 @@ class GUI:
             self.plate.source.to_excel(writer, sheet_name='source', startrow = 0, startcol=0)
 
             workbook.close()
-            writer.save()
 
     def format_sheet(self, writer, workbook, worksheet, startrow, startcol, frame):
             for index, cell in enumerate(frame['Cell']):
@@ -380,9 +379,3 @@ class GUI:
         col = int(cell[-2:]) - 1
 
         return (row, col)
-
-    
-
-
-
-
