@@ -1,8 +1,14 @@
 .DS_Store
+test.*
 *.csv
-*.ipynb
+*.xlsx
+.ipynb_checkpoints/*
+__pycache__/*
 output/
 input/
+build/
+dist/
+*.spec
 .gitignore
 .nosync
 reqs.txt

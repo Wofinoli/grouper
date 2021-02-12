@@ -56,6 +56,7 @@ class Plate:
     def get_potentials(self):
         return self.potentials
 
+    @staticmethod
     def choose_layout():
         rows = 0
         cols = 0
@@ -156,7 +157,7 @@ def get_relevant(filename):
 
     temp = 0
     for column in columns:
-        if re.match("Sweep \d{3}\.\d", column):
+        if re.match(r"Sweep \d{3}\.\d", column):
             bool_mask.append(True)
             param = int(column.split(".")[-1]) 
             if param > temp:
