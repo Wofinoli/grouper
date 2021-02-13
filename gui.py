@@ -104,6 +104,7 @@ class GUI:
                 plate_win.close()
                 plate_win = None
                 plot_win = self.make_plot_win()
+                self.set_start_cell()
                 self.draw_plot()
                 self.finalize_groups()
 
@@ -197,8 +198,8 @@ class GUI:
             index = 0 if pd.isnull(self.plate.failed.index.max()) else self.plate.failed.index.max() + 1
             self.plate.failed.loc[index] = self.title
             plt.close()
-            self.next_cell()
-            self.draw_plot()
+            if self.next_cell():
+                self.draw_plot()
             return
     
         label = 'fit: $v_{rev}=%5.3f, g_{max}=%5.3f, v_{0.5}=%5.3f, v_{slope}=%5.3f$' % tuple(self.popt)
@@ -209,21 +210,43 @@ class GUI:
         ax.grid()
         ax.legend()
     
-        ax.set_title(self.title)
+        ax.set_title(self.active_group.name + "_" + self.title)
         ax.set_xlabel("Potential (mV)")
         ax.set_ylabel("Current (pA)")
         
         fig.canvas.draw()
 
     def next_cell(self):
-        if self.row == self.rows - 1 and self.col == self.cols - 1:
-            return
+        #if self.row == self.rows - 1 and self.col == self.cols - 1:
+        #    return
 
-        if self.col < self.cols - 1:
+        #if self.col < self.cols - 1:
+        #    self.col += 1
+        #else:
+        #    self.col = 0
+        #    self.row += 1
+
+        max_rows, max_cols = self.active_group.coordinates[self.pair][1]
+        min_rows, min_cols = self.active_group.coordinates[self.pair][0]
+        if(self.col < max_cols):
             self.col += 1
+        elif(self.row < max_rows):
+            self.col = min_cols
+            self.row += 1 
         else:
-            self.col = 0
-            self.row += 1
+            if(len(self.active_group.coordinates) > self.pair + 1):
+                self.pair += 1
+            else:
+                try:
+                    _, self.active_group = next(self.group_iter)
+                except StopIteration:
+                    print("No more groups")
+                    return False
+
+                self.pair = 0
+            self.row, self.col = self.active_group.coordinates[self.pair][0]
+
+        return True
 
     def prev_cell(self):
         if self.row == 0 and self.col == 0:
@@ -286,6 +309,14 @@ class GUI:
             bottom += self.button_size + self.padding
 
         return buttons
+
+    def set_start_cell(self):
+        if(len(self.groups) > 0):
+            self.group_iter = iter(self.groups.items())
+            self.pair = 0
+            _, self.active_group = next(self.group_iter)
+            start = self.active_group.coordinates[self.pair]
+            self.row, self.col = start[0]
 
     def fill_cells(self, start_row, start_col, end_row, end_col):
         if start_row > end_row:
