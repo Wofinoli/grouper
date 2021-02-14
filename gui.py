@@ -176,8 +176,9 @@ class GUI:
         potentials = self.plate.potentials
         row_names = self.plate.row_names
 
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
+        fig = plt.figure(figsize=(6.4*2, 4.8)) # Based off matplotlib default size
+        cell_ax = fig.add_subplot(121)
+        cumul_ax = fig.add_subplot(122)
         plt.ion()
 
         fig.show()
@@ -203,18 +204,32 @@ class GUI:
             return
     
         label = 'fit: $v_{rev}=%5.3f, g_{max}=%5.3f, v_{0.5}=%5.3f, v_{slope}=%5.3f$' % tuple(self.popt)
-        ax.clear()
-        ax.plot(potentials, self.ydata, 'b.', label="data")
-        xrange = np.arange(min(potentials), max(potentials), 0.01)
-        ax.plot(xrange, data_process.func_IV_NA(xrange, *self.popt), 'r-', label=label)
-        ax.grid()
-        ax.legend()
+        cell_ax.clear()
+        cell_ax.plot(potentials, self.ydata, 'b.', label="data")
+        x_range = np.arange(min(potentials), max(potentials), 0.01)
+        cell_ax.plot(x_range, data_process.func_IV_NA(x_range, *self.popt), 'r-', label=label)
+        cell_ax.grid()
+        cell_ax.legend()
     
-        ax.set_title(self.active_group.name + "_" + self.title)
-        ax.set_xlabel("Potential (mV)")
-        ax.set_ylabel("Current (pA)")
-        
+        cell_ax.set_title(self.active_group.name + "_" + self.title)
+        cell_ax.set_xlabel("Potential (mV)")
+        cell_ax.set_ylabel("Current (pA)")
+
+        self.get_cumul(self.active_group.name)
+        color = self.active_group.color
+        for fit in self.get_cumul(self.active_group.name):
+            cumul_ax.plot(x_range, data_process.func_IV_NA(x_range, *fit), '-', color=color, label=label)
+
+        cumul_ax.grid()
+        cumul_ax.set_title(self.active_group.name)
+        cumul_ax.set_xlabel("Potential (mV)")
+        cumul_ax.set_ylabel("Current (pA)")
+
         fig.canvas.draw()
+
+    def get_cumul(self, group):
+        current = self.plate.accepted_fits[self.plate.accepted_fits['Cell'].str.startswith(group)]
+        return current.loc[:, current.columns != 'Cell'].to_numpy()
 
     def next_cell(self):
         #if self.row == self.rows - 1 and self.col == self.cols - 1:
