@@ -5,6 +5,7 @@ import numpy as np
 from scipy.optimize import curve_fit
 from scipy import stats
 import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
 import string
 import math
 
@@ -122,6 +123,8 @@ class GUI:
                 else:
                     if event == 'Accept':
                         self.accept_cell()
+                    if event == 'Reject':
+                        self.reject_cell()
 
                     self.next_cell()
 
@@ -176,8 +179,9 @@ class GUI:
         potentials = self.plate.potentials
         row_names = self.plate.row_names
 
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
+        fig = plt.figure(figsize=(6.4*2, 4.8)) # Based off matplotlib default size
+        cell_ax = fig.add_subplot(121)
+        cumul_ax = fig.add_subplot(122)
         plt.ion()
 
         fig.show()
@@ -203,18 +207,42 @@ class GUI:
             return
     
         label = 'fit: $v_{rev}=%5.3f, g_{max}=%5.3f, v_{0.5}=%5.3f, v_{slope}=%5.3f$' % tuple(self.popt)
-        ax.clear()
-        ax.plot(potentials, self.ydata, 'b.', label="data")
-        xrange = np.arange(min(potentials), max(potentials), 0.01)
-        ax.plot(xrange, data_process.func_IV_NA(xrange, *self.popt), 'r-', label=label)
-        ax.grid()
-        ax.legend()
+        cell_ax.clear()
+        cell_ax.plot(potentials, self.ydata, 'b.', label="data")
+        x_range = np.arange(min(potentials), max(potentials), 0.01)
+        cell_ax.plot(x_range, data_process.func_IV_NA(x_range, *self.popt), 'r-', label=label)
+        cell_ax.grid()
+        cell_ax.legend()
     
-        ax.set_title(self.active_group.name + "_" + self.title)
-        ax.set_xlabel("Potential (mV)")
-        ax.set_ylabel("Current (pA)")
-        
+        cell_ax.set_title(self.active_group.name + "_" + self.title)
+        cell_ax.set_xlabel("Potential (mV)")
+        cell_ax.set_ylabel("Current (pA)")
+
+        self.get_cumul(self.active_group.name)
+        color = self.active_group.color
+        custom_legend = [Line2D([0],[0], color=color, lw=4),
+                         Line2D([0],[0], color='black', lw=4)]
+        for fit in self.get_cumul(self.active_group.name):
+            cumul_ax.plot(x_range, data_process.func_IV_NA(x_range, *fit), '-', color=color)
+
+        for fit in self.get_rejected_fits(self.active_group.name):
+            cumul_ax.plot(x_range, data_process.func_IV_NA(x_range, *fit), '-', color='black')
+
+        cumul_ax.grid()
+        cumul_ax.set_title(self.active_group.name + " Cumulative")
+        cumul_ax.set_xlabel("Potential (mV)")
+        cumul_ax.set_ylabel("Current (pA)")
+        cumul_ax.legend(custom_legend, ['Accepted', 'Rejected'])
+
         fig.canvas.draw()
+
+    def get_cumul(self, group):
+        current = self.plate.accepted_fits[self.plate.accepted_fits['Cell'].str.startswith(group)]
+        return current.loc[:, current.columns != 'Cell'].to_numpy()
+
+    def get_rejected_fits(self, group):
+        current = self.plate.rejected_fits[self.plate.rejected_fits['Cell'].str.startswith(group)]
+        return current.loc[:, current.columns != 'Cell'].to_numpy()
 
     def next_cell(self):
         #if self.row == self.rows - 1 and self.col == self.cols - 1:
@@ -278,6 +306,26 @@ class GUI:
         self.plate.accepted_fits.loc[index, 'Cell'] =  title
         self.plate.accepted_fits.loc[index, 'v_rev':'v_slope'] = self.popt
         self.plate.source[title] = self.ydata
+
+    def reject_cell(self):
+        index = 0 if pd.isnull(self.plate.rejected_fits.index.max()) else self.plate.rejected_fits.index.max() + 1
+        title = self.title
+        for name, group in self.groups.items():
+            coords = group.coordinates
+            color = group.color
+
+            for coord in coords:
+                start_row, start_col = coord[0]
+                end_row, end_col = coord[1]
+
+                if self.row >= start_row and self.row <= end_row and self.col >= start_col and self.col <= end_col:
+                    title = name + "_" + title
+
+        if title in self.plate.rejected_fits['Cell'].values:
+            return
+
+        self.plate.rejected_fits.loc[index, 'Cell'] =  title
+        self.plate.rejected_fits.loc[index, 'v_rev':'v_slope'] = self.popt
         
     def get_button_size(self):
         height = self.height - self.padding - self.offset
