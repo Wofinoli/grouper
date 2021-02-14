@@ -25,6 +25,7 @@ class Plate():
         self.filename = filename
         self.read_file()
         self.accepted_fits = pd.DataFrame(columns=["Cell", "v_rev","g_max","v_half","v_slope"])
+        self.rejected_fits = pd.DataFrame(columns=["Cell", "v_rev","g_max","v_half","v_slope"])
         self.failed = pd.DataFrame(columns=["Failed"])
         self.statistics = pd.DataFrame(index=np.arange(0,self.accepted_fits.shape[1]-1), columns=["Variable","Mean","Median","Std. Dev","Std. Err","Max","Min","N"])
 
