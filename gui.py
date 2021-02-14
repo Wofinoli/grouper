@@ -364,6 +364,32 @@ class GUI:
                     for col in range(start_col, end_col+1):
                         self.group_colors[(row,col)] = color
 
+    def get_group_statistics(self):
+        rows = len(self.groups) * self.plate.accepted_fits.shape[1]
+
+        statistics = pd.DataFrame(index=np.arange(0, rows), columns=["Group", "Variable","Mean","Median","Std. Dev","Std. Err","Max","Min","N"])
+
+        index = 0
+        for name in self.groups.keys():
+            current = self.plate.accepted_fits[self.plate.accepted_fits['Cell'].str.startswith(name)]
+
+            statistics.iloc[index]['Group'] = name
+            for label, content in current.items():
+                if(label == "Cell"):
+                    continue
+                
+                statistics.iloc[index]["Variable"] = label
+                statistics.iloc[index]["Mean"] = np.mean(content)
+                statistics.iloc[index]["Median"] = np.median(content)
+                statistics.iloc[index]["Std. Dev"] = np.std(content, ddof=1)
+                statistics.iloc[index]["Std. Err"] = stats.sem(content, axis=None, nan_policy="omit")
+                statistics.iloc[index]["Max"] = np.max(content)
+                statistics.iloc[index]["Min"] = np.min(content)
+                statistics.iloc[index]["N"] = np.sum(content.count())
+                index += 1
+         
+        return statistics
+
 
     def to_excel(self):
         last_sep = self.filename.rindex("/") + 1
@@ -389,8 +415,9 @@ class GUI:
             self.plate.statistics.to_excel(writer,sheet_name=name,startrow=0, startcol=startcol)
             self.plate.failed.to_excel(writer,sheet_name=name, startrow=startrow, startcol=startcol)
             
-            #group_statistics = self.get_group_statistics()
-            #group_statistics.to_excel(writer, sheet_name=name, startrow = self.p)
+            startrow += self.plate.failed.shape[0] + 2
+            group_statistics = self.get_group_statistics()
+            group_statistics.to_excel(writer, sheet_name=name, startrow=startrow, startcol=startcol)
 
 
             source_sheet = workbook.add_worksheet('source')
