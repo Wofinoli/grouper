@@ -426,11 +426,13 @@ class GUI:
                 if(label == "Cell"):
                     continue
                 
+
                 statistics.iloc[index]["Variable"] = label
                 statistics.iloc[index]["Mean"] = np.mean(content)
                 statistics.iloc[index]["Median"] = np.median(content)
                 statistics.iloc[index]["Std. Dev"] = np.std(content, ddof=1)
-                statistics.iloc[index]["Std. Err"] = stats.sem(content, axis=None, nan_policy="omit")
+                if len(current) > 1:
+                    statistics.iloc[index]["Std. Err"] = stats.sem(content, axis=None, nan_policy="omit")
                 statistics.iloc[index]["Max"] = np.max(content)
                 statistics.iloc[index]["Min"] = np.min(content)
                 statistics.iloc[index]["N"] = np.sum(content.count())
