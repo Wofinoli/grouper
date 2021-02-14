@@ -195,8 +195,8 @@ class GUI:
             self.ydata.append(sweep.iloc[self.row,self.col])
            
         try:
-            bounds = ((65,-np.inf,-np.inf,-np.inf),(85,np.inf,np.inf,np.inf))
-            self.popt, pcov = curve_fit(data_process.func_IV_NA, potentials, self.ydata, p0=[70,0.4,0.6,1], bounds=bounds, maxfev=100000)
+            #bounds = ((65,-np.inf,-np.inf,-np.inf),(85,np.inf,np.inf,np.inf))
+            self.popt, pcov = curve_fit(data_process.func_IV_NA, potentials, self.ydata, p0=[70,0.4,0.6,1], maxfev=100000)
         except:
             print("Fit failed for " + self.title)
             index = 0 if pd.isnull(self.plate.failed.index.max()) else self.plate.failed.index.max() + 1
