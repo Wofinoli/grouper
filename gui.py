@@ -272,6 +272,9 @@ class GUI:
                 if self.row >= start_row and self.row <= end_row and self.col >= start_col and self.col <= end_col:
                     title = name + "_" + title
 
+        if title in self.plate.accepted_fits['Cell'].values:
+            return
+
         self.plate.accepted_fits.loc[index, 'Cell'] =  title
         self.plate.accepted_fits.loc[index, 'v_rev':'v_slope'] = self.popt
         self.plate.source[title] = self.ydata
@@ -370,24 +373,29 @@ class GUI:
 
         filename = "RESULT_" + self.filename[last_sep:-4] + ".xlsx"
         filename = os.path.join(path, filename)
-        print(filename)
         with pd.ExcelWriter(filename) as writer: 
             name = "Result"
             workbook = writer.book
             worksheet = workbook.add_worksheet(name)
             writer.sheets[name] = worksheet
 
-            self.plate.accepted_fits.to_excel(writer,sheet_name=name,startrow=0 , startcol=0)
-            self.format_sheet(writer, workbook, worksheet, 0, 0, self.plate.accepted_fits)
+            startrow, startcol = 0, 0
 
-            self.plate.statistics.to_excel(writer,sheet_name=name,startrow=0, startcol=self.plate.accepted_fits.shape[1]+2)
-            self.plate.failed.to_excel(writer,sheet_name=name, startrow = self.plate.statistics.shape[0]+2, startcol = self.plate.accepted_fits.shape[1]+2)
+            self.plate.accepted_fits.to_excel(writer,sheet_name=name,startrow=startrow, startcol=startcol)
+            self.format_sheet(writer, workbook, worksheet, startrow, startcol, self.plate.accepted_fits)
+
+            startcol = self.plate.accepted_fits.shape[1] + 2
+            startrow = self.plate.statistics.shape[0] + 2
+            self.plate.statistics.to_excel(writer,sheet_name=name,startrow=0, startcol=startcol)
+            self.plate.failed.to_excel(writer,sheet_name=name, startrow=startrow, startcol=startcol)
             
+            #group_statistics = self.get_group_statistics()
+            #group_statistics.to_excel(writer, sheet_name=name, startrow = self.p)
+
+
             source_sheet = workbook.add_worksheet('source')
             writer.sheets['source'] = source_sheet
             self.plate.source.to_excel(writer, sheet_name='source', startrow = 0, startcol=0)
-
-            workbook.close()
 
     def format_sheet(self, writer, workbook, worksheet, startrow, startcol, frame):
             for index, cell in enumerate(frame['Cell']):
