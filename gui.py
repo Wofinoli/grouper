@@ -164,7 +164,7 @@ class GUI:
         layout= [[sg.Text("Choose file",  size=(15,1))],
                  [sg.In(visible=False, enable_events=True, key='file_choose'), sg.FileBrowse()]]
 
-        return sg.Window('Choose file', layout, size=(200,75), finalize = True)
+        return sg.Window('Choose file', layout, size=(300,75), finalize = True)
 
     def make_plot_win(self):
         layout = [[sg.Button("Accept"), sg.Button("Reject")],
