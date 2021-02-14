@@ -408,7 +408,7 @@ class GUI:
             startrow, startcol = 0, 0
 
             self.plate.accepted_fits.to_excel(writer,sheet_name=name,startrow=startrow, startcol=startcol)
-            self.format_sheet(writer, workbook, worksheet, startrow, startcol, self.plate.accepted_fits)
+            self.format_sheet(writer, workbook, worksheet, startrow, startcol, self.plate.accepted_fits, 'Cell')
 
             startcol = self.plate.accepted_fits.shape[1] + 2
             startrow = self.plate.statistics.shape[0] + 2
@@ -424,8 +424,8 @@ class GUI:
             writer.sheets['source'] = source_sheet
             self.plate.source.to_excel(writer, sheet_name='source', startrow = 0, startcol=0)
 
-    def format_sheet(self, writer, workbook, worksheet, startrow, startcol, frame):
-            for index, cell in enumerate(frame['Cell']):
+    def format_sheet(self, writer, workbook, worksheet, startrow, startcol, frame, key):
+            for index, cell in enumerate(frame[key]):
                 name = cell[-3:]
                 coords = self.cell_to_pair(name)
                 if coords in self.group_colors:
