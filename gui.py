@@ -104,6 +104,7 @@ class GUI:
                 plate_win.close()
                 plate_win = None
                 plot_win = self.make_plot_win()
+                self.set_start_cell()
                 self.draw_plot()
                 self.finalize_groups()
 
@@ -197,8 +198,8 @@ class GUI:
             index = 0 if pd.isnull(self.plate.failed.index.max()) else self.plate.failed.index.max() + 1
             self.plate.failed.loc[index] = self.title
             plt.close()
-            self.next_cell()
-            self.draw_plot()
+            if self.next_cell():
+                self.draw_plot()
             return
     
         label = 'fit: $v_{rev}=%5.3f, g_{max}=%5.3f, v_{0.5}=%5.3f, v_{slope}=%5.3f$' % tuple(self.popt)
@@ -209,21 +210,43 @@ class GUI:
         ax.grid()
         ax.legend()
     
-        ax.set_title(self.title)
+        ax.set_title(self.active_group.name + "_" + self.title)
         ax.set_xlabel("Potential (mV)")
         ax.set_ylabel("Current (pA)")
         
         fig.canvas.draw()
 
     def next_cell(self):
-        if self.row == self.rows - 1 and self.col == self.cols - 1:
-            return
+        #if self.row == self.rows - 1 and self.col == self.cols - 1:
+        #    return
 
-        if self.col < self.cols - 1:
+        #if self.col < self.cols - 1:
+        #    self.col += 1
+        #else:
+        #    self.col = 0
+        #    self.row += 1
+
+        max_rows, max_cols = self.active_group.coordinates[self.pair][1]
+        min_rows, min_cols = self.active_group.coordinates[self.pair][0]
+        if(self.col < max_cols):
             self.col += 1
+        elif(self.row < max_rows):
+            self.col = min_cols
+            self.row += 1 
         else:
-            self.col = 0
-            self.row += 1
+            if(len(self.active_group.coordinates) > self.pair + 1):
+                self.pair += 1
+            else:
+                try:
+                    _, self.active_group = next(self.group_iter)
+                except StopIteration:
+                    print("No more groups")
+                    return False
+
+                self.pair = 0
+            self.row, self.col = self.active_group.coordinates[self.pair][0]
+
+        return True
 
     def prev_cell(self):
         if self.row == 0 and self.col == 0:
@@ -248,6 +271,9 @@ class GUI:
 
                 if self.row >= start_row and self.row <= end_row and self.col >= start_col and self.col <= end_col:
                     title = name + "_" + title
+
+        if title in self.plate.accepted_fits['Cell'].values:
+            return
 
         self.plate.accepted_fits.loc[index, 'Cell'] =  title
         self.plate.accepted_fits.loc[index, 'v_rev':'v_slope'] = self.popt
@@ -286,6 +312,14 @@ class GUI:
             bottom += self.button_size + self.padding
 
         return buttons
+
+    def set_start_cell(self):
+        if(len(self.groups) > 0):
+            self.group_iter = iter(self.groups.items())
+            self.pair = 0
+            _, self.active_group = next(self.group_iter)
+            start = self.active_group.coordinates[self.pair]
+            self.row, self.col = start[0]
 
     def fill_cells(self, start_row, start_col, end_row, end_col):
         if start_row > end_row:
@@ -330,6 +364,32 @@ class GUI:
                     for col in range(start_col, end_col+1):
                         self.group_colors[(row,col)] = color
 
+    def get_group_statistics(self):
+        rows = len(self.groups) * self.plate.accepted_fits.shape[1]
+
+        statistics = pd.DataFrame(index=np.arange(0, rows), columns=["Group", "Variable","Mean","Median","Std. Dev","Std. Err","Max","Min","N"])
+
+        index = 0
+        for name in self.groups.keys():
+            current = self.plate.accepted_fits[self.plate.accepted_fits['Cell'].str.startswith(name)]
+
+            statistics.iloc[index]['Group'] = name
+            for label, content in current.items():
+                if(label == "Cell"):
+                    continue
+                
+                statistics.iloc[index]["Variable"] = label
+                statistics.iloc[index]["Mean"] = np.mean(content)
+                statistics.iloc[index]["Median"] = np.median(content)
+                statistics.iloc[index]["Std. Dev"] = np.std(content, ddof=1)
+                statistics.iloc[index]["Std. Err"] = stats.sem(content, axis=None, nan_policy="omit")
+                statistics.iloc[index]["Max"] = np.max(content)
+                statistics.iloc[index]["Min"] = np.min(content)
+                statistics.iloc[index]["N"] = np.sum(content.count())
+                index += 1
+         
+        return statistics
+
 
     def to_excel(self):
         last_sep = self.filename.rindex("/") + 1
@@ -339,27 +399,33 @@ class GUI:
 
         filename = "RESULT_" + self.filename[last_sep:-4] + ".xlsx"
         filename = os.path.join(path, filename)
-        print(filename)
         with pd.ExcelWriter(filename) as writer: 
             name = "Result"
             workbook = writer.book
             worksheet = workbook.add_worksheet(name)
             writer.sheets[name] = worksheet
 
-            self.plate.accepted_fits.to_excel(writer,sheet_name=name,startrow=0 , startcol=0)
-            self.format_sheet(writer, workbook, worksheet, 0, 0, self.plate.accepted_fits)
+            startrow, startcol = 0, 0
 
-            self.plate.statistics.to_excel(writer,sheet_name=name,startrow=0, startcol=self.plate.accepted_fits.shape[1]+2)
-            self.plate.failed.to_excel(writer,sheet_name=name, startrow = self.plate.statistics.shape[0]+2, startcol = self.plate.accepted_fits.shape[1]+2)
+            self.plate.accepted_fits.to_excel(writer,sheet_name=name,startrow=startrow, startcol=startcol)
+            self.format_sheet(writer, workbook, worksheet, startrow, startcol, self.plate.accepted_fits, 'Cell')
+
+            startcol = self.plate.accepted_fits.shape[1] + 2
+            startrow = self.plate.statistics.shape[0] + 2
+            self.plate.statistics.to_excel(writer,sheet_name=name,startrow=0, startcol=startcol)
+            self.plate.failed.to_excel(writer,sheet_name=name, startrow=startrow, startcol=startcol)
             
+            startrow += self.plate.failed.shape[0] + 2
+            group_statistics = self.get_group_statistics()
+            group_statistics.to_excel(writer, sheet_name=name, startrow=startrow, startcol=startcol)
+
+
             source_sheet = workbook.add_worksheet('source')
             writer.sheets['source'] = source_sheet
             self.plate.source.to_excel(writer, sheet_name='source', startrow = 0, startcol=0)
 
-            workbook.close()
-
-    def format_sheet(self, writer, workbook, worksheet, startrow, startcol, frame):
-            for index, cell in enumerate(frame['Cell']):
+    def format_sheet(self, writer, workbook, worksheet, startrow, startcol, frame, key):
+            for index, cell in enumerate(frame[key]):
                 name = cell[-3:]
                 coords = self.cell_to_pair(name)
                 if coords in self.group_colors:
