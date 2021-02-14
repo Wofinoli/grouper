@@ -466,6 +466,7 @@ class GUI:
             startrow += self.plate.failed.shape[0] + 2
             group_statistics = self.get_group_statistics()
             group_statistics.to_excel(writer, sheet_name=name, startrow=startrow, startcol=startcol)
+            self.format_sheet(writer,workbook,worksheet,startrow,startcol,group_statistics,'Group')
 
 
             source_sheet = workbook.add_worksheet('source')
@@ -473,6 +474,7 @@ class GUI:
             self.plate.source.to_excel(writer, sheet_name='source', startrow = 0, startcol=0)
 
     def format_sheet(self, writer, workbook, worksheet, startrow, startcol, frame, key):
+        if key == 'Cell':
             for index, cell in enumerate(frame[key]):
                 name = cell[-3:]
                 coords = self.cell_to_pair(name)
@@ -487,7 +489,20 @@ class GUI:
                              'criteria': '!=',
                              'value': '""',
                              'format': cell_format})
+        elif key == 'Group':
+            for name, group in self.groups.items():
+                color = group.color
+                cell_format = workbook.add_format({'bg_color': color})
+                endcol = frame.shape[1] + startcol
+                endrow = startrow + 4 #Number of variables, TODO: refactor for generality
+                worksheet.conditional_format(startrow + 1, startcol + 1, endrow, endcol,
+                        {'type': 'cell',
+                         'criteria': '!=',
+                         'value': '""',
+                         'format': cell_format})
 
+                startrow = endrow
+ 
     def cell_to_pair(self, cell):
         row = ord(cell[0]) - ord('A')
         col = int(cell[-2:]) - 1
