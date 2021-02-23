@@ -307,6 +307,15 @@ class GUI:
         self.plate.accepted_fits.loc[index, 'v_rev':'v_slope'] = self.popt
         self.plate.source[title] = self.ydata
 
+        driving_force = self.plate.source['Potential'] - self.plate.accepted_fits.loc[index, 'v_rev']
+        conductance = self.plate.source[title] / driving_force
+        g_max = conductance.max()
+        normalized_g = conductance / g_max
+
+        title += "_G"
+        self.plate.source[title] = normalized_g
+
+
     def reject_cell(self):
         index = 0 if pd.isnull(self.plate.rejected_fits.index.max()) else self.plate.rejected_fits.index.max() + 1
         title = self.title
@@ -473,8 +482,16 @@ class GUI:
 
             source_sheet = workbook.add_worksheet('source')
             writer.sheets['source'] = source_sheet
-            self.plate.source.to_excel(writer, sheet_name='source', startrow = 0, startcol=0)
 
+            source_width, source_height = self.plate.source.shape
+            current_cols = [not name.endswith('_G') for name in self.plate.source.columns]
+            self.plate.source.loc[:, current_cols].to_excel(writer, sheet_name='source', startrow = 0, startcol=0)
+
+            conductance_cols = [not col for col in current_cols]
+            conductance_cols[0] = True
+
+            self.plate.source.loc[:, conductance_cols].to_excel(writer, sheet_name='source', startrow = source_height, startcol=0)
+            
     def format_sheet(self, writer, workbook, worksheet, startrow, startcol, frame, key):
         if key == 'Cell':
             for index, cell in enumerate(frame[key]):
