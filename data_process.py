@@ -24,8 +24,8 @@ class Plate():
         self.rows = rows
         self.filename = filename
         self.read_file()
-        self.accepted_fits = pd.DataFrame(columns=["Cell", "v_rev","g_max","v_half","v_slope"])
-        self.rejected_fits = pd.DataFrame(columns=["Cell", "v_rev","g_max","v_half","v_slope"])
+        self.accepted_fits = pd.DataFrame(columns=["Cell", "f_max","v_half","k"])
+        self.rejected_fits = pd.DataFrame(columns=["Cell", "f_max","v_half","k"])
         self.failed = pd.DataFrame(columns=["Failed"])
         self.statistics = pd.DataFrame(index=np.arange(0,self.accepted_fits.shape[1]-1), columns=["Variable","Mean","Median","Std. Dev","Std. Err","Max","Min","N"])
 
@@ -71,7 +71,7 @@ class Plate():
                     col = self.num_param*(sweep-1) + index
                     self.potentials.append(float(relevant_data.iloc[2,col]) * 1000)
                     
-            if param == "INa":
+            if param == "Rel.Inact.":
                 for sweep in range(1, self.num_sweeps+1):
                     col = self.num_param*(sweep-1) + (index)
                     sodium_arr = relevant_data.iloc[:,col].astype(float).to_numpy()
@@ -82,6 +82,8 @@ class Plate():
 
         self.source = pd.DataFrame(self.potentials, columns=["Potential"])
 
+def func_SSI_rel(v, f_max, v_half, k):
+    return f_max / (1 + np.exp((v - v_half)/k))
      
 def func_IV_NA(v, vrev, gmax, vhalf, vslope): # IV
     return (v - vrev) * gmax/(1 + np.exp((vhalf - v)/vslope))

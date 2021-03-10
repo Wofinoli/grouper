@@ -194,9 +194,23 @@ class GUI:
         for sweep in sodium_sweeps:
             self.ydata.append(sweep.iloc[self.row,self.col])
            
+        g_max = max(self.ydata)
+        try:
+            self.ydata = [g / g_max for g in self.ydata]
+        except:
+            print("Data invalid for {}".format(self.title))
+            print("Check source .csv")
+            index = 0 if pd.isnull(self.plate.failed.index.max()) else self.plate.failed.index.max() + 1
+            self.plate.failed.loc[index] = self.title
+            plt.close()
+            if self.next_cell():
+                self.draw_plot()
+            return
+
         try:
             #bounds = ((65,-np.inf,-np.inf,-np.inf),(85,np.inf,np.inf,np.inf))
-            self.popt, pcov = curve_fit(data_process.func_IV_NA, potentials, self.ydata, p0=[70,0.4,0.6,1], maxfev=100000)
+            p0 = [max(self.ydata), np.median(potentials), 1]
+            self.popt, pcov = curve_fit(data_process.func_SSI_rel, potentials, self.ydata, maxfev=100000, p0=p0)
         except:
             print("Fit failed for " + self.title)
             index = 0 if pd.isnull(self.plate.failed.index.max()) else self.plate.failed.index.max() + 1
@@ -206,32 +220,32 @@ class GUI:
                 self.draw_plot()
             return
     
-        label = 'fit: $v_{rev}=%5.3f, g_{max}=%5.3f, v_{0.5}=%5.3f, v_{slope}=%5.3f$' % tuple(self.popt)
+        label = 'fit: $f_{max}=%5.3f, v_{0.5}=%5.3f, k=%5.3f$' % tuple(self.popt)
         cell_ax.clear()
         cell_ax.plot(potentials, self.ydata, 'b.', label="data")
         x_range = np.arange(min(potentials), max(potentials), 0.01)
-        cell_ax.plot(x_range, data_process.func_IV_NA(x_range, *self.popt), 'r-', label=label)
+        cell_ax.plot(x_range, data_process.func_SSI_rel(x_range, *self.popt), 'r-', label=label)
         cell_ax.grid()
         cell_ax.legend()
     
         cell_ax.set_title(self.active_group.name + "_" + self.title)
         cell_ax.set_xlabel("Potential (mV)")
-        cell_ax.set_ylabel("Current (pA)")
+        cell_ax.set_ylabel("$G/G_{max}$")
 
         self.get_cumul(self.active_group.name)
         color = self.active_group.color
         custom_legend = [Line2D([0],[0], color=color, lw=4),
                          Line2D([0],[0], color='black', lw=4)]
         for fit in self.get_cumul(self.active_group.name):
-            cumul_ax.plot(x_range, data_process.func_IV_NA(x_range, *fit), '-', color=color)
+            cumul_ax.plot(x_range, data_process.func_SSI_rel(x_range, *fit), '-', color=color)
 
         for fit in self.get_rejected_fits(self.active_group.name):
-            cumul_ax.plot(x_range, data_process.func_IV_NA(x_range, *fit), '-', color='black')
+            cumul_ax.plot(x_range, data_process.func_SSI_rel(x_range, *fit), '-', color='black')
 
         cumul_ax.grid()
         cumul_ax.set_title(self.active_group.name + " Cumulative")
         cumul_ax.set_xlabel("Potential (mV)")
-        cumul_ax.set_ylabel("Current (pA)")
+        cumul_ax.set_ylabel("$G/G_{max}$")
         cumul_ax.legend(custom_legend, ['Accepted', 'Rejected'])
 
         fig.canvas.draw()
@@ -304,16 +318,16 @@ class GUI:
             return
 
         self.plate.accepted_fits.loc[index, 'Cell'] =  title
-        self.plate.accepted_fits.loc[index, 'v_rev':'v_slope'] = self.popt
+        self.plate.accepted_fits.loc[index, 'f_max':'k'] = self.popt
         self.plate.source[title] = self.ydata
 
-        driving_force = self.plate.source['Potential'] - self.plate.accepted_fits.loc[index, 'v_rev']
-        conductance = self.plate.source[title] / driving_force
-        g_max = conductance.max()
-        normalized_g = conductance / g_max
+        #driving_force = self.plate.source['Potential'] - self.plate.accepted_fits.loc[index, 'v_rev']
+        #conductance = self.plate.source[title] / driving_force
+        #g_max = conductance.max()
+        #normalized_g = conductance / g_max
 
-        title += "_G"
-        self.plate.source[title] = normalized_g
+        #title += "_G"
+        #self.plate.source[title] = normalized_g
 
 
     def reject_cell(self):
@@ -334,7 +348,7 @@ class GUI:
             return
 
         self.plate.rejected_fits.loc[index, 'Cell'] =  title
-        self.plate.rejected_fits.loc[index, 'v_rev':'v_slope'] = self.popt
+        self.plate.rejected_fits.loc[index, 'f_max':'k'] = self.popt
         
     def get_button_size(self):
         height = self.height - self.padding - self.offset
@@ -452,7 +466,7 @@ class GUI:
 
     def to_excel(self):
         last_sep = self.filename.rindex("/") + 1
-        path = os.path.join(os.getcwd(), "output")
+        path = os.path.join(os.getcwd(), "output_SSI")
         if not os.path.exists(path):
             os.makedirs(path)
 
@@ -490,7 +504,7 @@ class GUI:
             conductance_cols = [not col for col in current_cols]
             conductance_cols[0] = True
 
-            self.plate.source.loc[:, conductance_cols].to_excel(writer, sheet_name='source', startrow = source_height, startcol=0)
+            #self.plate.source.loc[:, conductance_cols].to_excel(writer, sheet_name='source', startrow = source_height, startcol=0)
             
     def format_sheet(self, writer, workbook, worksheet, startrow, startcol, frame, key):
         if key == 'Cell':
@@ -509,11 +523,12 @@ class GUI:
                              'value': '""',
                              'format': cell_format})
         elif key == 'Group':
+            height = self.plate.accepted_fits.shape[1] - 1
             for name, group in self.groups.items():
                 color = group.color
                 cell_format = workbook.add_format({'bg_color': color})
                 endcol = frame.shape[1] + startcol
-                endrow = startrow + 4 #Number of variables, TODO: refactor for generality
+                endrow = startrow + height #Number of variables, TODO: refactor for generality
                 worksheet.conditional_format(startrow + 1, startcol + 1, endrow, endcol,
                         {'type': 'cell',
                          'criteria': '!=',
