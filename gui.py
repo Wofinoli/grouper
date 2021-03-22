@@ -1,4 +1,4 @@
-import PySimpleGUI as sg
+import PySimpleGUI as sg 
 import os
 import pandas as pd
 import numpy as np
@@ -115,22 +115,31 @@ class GUI:
                 self.plate.statistics = data_process.get_statistics(self.plate.accepted_fits)
                 self.to_excel()
 
+            if event == 'Try fit':
+                p0 = [values['f_max'], values['v_half'],
+                        values['k']]
+
+                p0 = [float(val) for val in p0]
+                refit_win.close()
+                refit_win = None
+                plt.close()
+                self.draw_plot(p0)
 
             if event in ['Accept', 'Reject', 'Next', 'Previous', 'Re-fit']:
-                plt.close()
-                if event == 'Previous':
-                    self.prev_cell()
-                elif event == 'Re-fit':
-                    print("Refitting")
+                if event == 'Re-fit':
+                    refit_win = self.make_refit_win()
                 else:
-                    if event == 'Accept':
-                        self.accept_cell()
-                    if event == 'Reject':
-                        self.reject_cell()
+                    plt.close()
+                    if event == 'Previous':
+                        self.prev_cell()
+                    else:
+                        if event == 'Accept':
+                            self.accept_cell()
+                        if event == 'Reject':
+                            self.reject_cell()
 
-                    self.next_cell()
-
-                self.draw_plot()
+                        self.next_cell()
+                    self.draw_plot()
 
     def make_plate_win(self):
         menu_def = [['Groups', ['New group', 'Edit group', 'Finalize groups']],
@@ -174,6 +183,16 @@ class GUI:
                   [sg.Button("Write to Excel", key="excel")],]
 
         return sg.Window('Plots', layout, size=(300,110), finalize = True)
+
+    def make_refit_win(self):
+        layout = [
+                [sg.Text('f_max: '), sg.Input(key='f_max')],
+                [sg.Text('v_half: '), sg.Input(key='v_half')],
+                [sg.Text('k'), sg.Input(key='k')],
+                [sg.Button('Try fit')]]
+
+        return sg.Window('Refit', layout, size=(300,150), finalize = True)
+
 
     def draw_plot(self, p0=None):
         plate = self.plate
@@ -289,10 +308,9 @@ class GUI:
                         break
 
                     if(self.active_group == group):
-                        print("Curent group found")
                         can_select = True
 
-                if prev_group == None:
+                if next_group == None:
                     return False
 
 
