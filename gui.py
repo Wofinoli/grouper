@@ -280,15 +280,6 @@ class GUI:
         return current.loc[:, current.columns != 'Cell'].to_numpy()
 
     def next_cell(self):
-        #if self.row == self.rows - 1 and self.col == self.cols - 1:
-        #    return
-
-        #if self.col < self.cols - 1:
-        #    self.col += 1
-        #else:
-        #    self.col = 0
-        #    self.row += 1
-
         max_rows, max_cols = self.active_group.coordinates[self.pair][1]
         min_rows, min_cols = self.active_group.coordinates[self.pair][0]
         if(self.col < max_cols):
