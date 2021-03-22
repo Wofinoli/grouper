@@ -125,7 +125,7 @@ class GUI:
                 else:
                     if event == 'Accept':
                         self.accept_cell()
-                    if event == 'Reject':
+                    elif event == 'Reject':
                         self.reject_cell()
 
                     self.next_cell()
@@ -193,9 +193,11 @@ class GUI:
         write_col = 1
         self.ydata = []
         self.title = row_names[self.row] + "{:02d}".format(self.col + 1)
+        success = True
         for sweep in sodium_sweeps:
             self.ydata.append(sweep.iloc[self.row,self.col])
            
+        x_range = np.arange(min(potentials), max(potentials), 0.01)
         try:
             #bounds = ((65,-np.inf,-np.inf,-np.inf),(85,np.inf,np.inf,np.inf))
             self.popt, pcov = curve_fit(data_process.func_IV_NA, potentials, self.ydata, p0=p0, maxfev=100000)
@@ -203,22 +205,22 @@ class GUI:
             print("Fit failed for " + self.title)
             index = 0 if pd.isnull(self.plate.failed.index.max()) else self.plate.failed.index.max() + 1
             self.plate.failed.loc[index] = self.title
-            plt.close()
-            if self.next_cell():
-                self.draw_plot()
-            return
+            #plt.close()
+            success = False
     
         label = 'fit: $v_{rev}=%5.3f, g_{max}=%5.3f, v_{0.5}=%5.3f, v_{slope}=%5.3f$' % tuple(self.popt)
+
         cell_ax.clear()
-        cell_ax.plot(potentials, self.ydata, 'b.', label="data")
-        x_range = np.arange(min(potentials), max(potentials), 0.01)
-        cell_ax.plot(x_range, data_process.func_IV_NA(x_range, *self.popt), 'r-', label=label)
-        cell_ax.grid()
-        cell_ax.legend()
-    
         cell_ax.set_title(self.active_group.name + "_" + self.title)
         cell_ax.set_xlabel("Potential (mV)")
         cell_ax.set_ylabel("Current (pA)")
+        cell_ax.grid()
+
+        if success:
+            cell_ax.plot(potentials, self.ydata, 'b.', label="data")
+            cell_ax.plot(x_range, data_process.func_IV_NA(x_range, *self.popt), 'r-', label=label)
+            cell_ax.legend()
+        
 
         self.get_cumul(self.active_group.name)
         color = self.active_group.color
@@ -267,11 +269,20 @@ class GUI:
             if(len(self.active_group.coordinates) > self.pair + 1):
                 self.pair += 1
             else:
-                try:
-                    _, self.active_group = next(self.group_iter)
-                except StopIteration:
-                    print("No more groups")
+                next_group = None
+                can_select = False
+                for _, group in self.groups.items():
+                    if can_select:
+                        self.active_group = group
+                        break
+
+                    if(self.active_group == group):
+                        print("Curent group found")
+                        can_select = True
+
+                if next_group == None:
                     return False
+
 
                 self.pair = 0
             self.row, self.col = self.active_group.coordinates[self.pair][0]
@@ -279,15 +290,36 @@ class GUI:
         return True
 
     def prev_cell(self):
-        if self.row == 0 and self.col == 0:
-            return
-
-        if self.col > 0:
+        max_rows, max_cols = self.active_group.coordinates[self.pair][1]
+        min_rows, min_cols = self.active_group.coordinates[self.pair][0]
+        if(self.col > min_cols):
             self.col -= 1
+        elif(self.row > min_rows):
+            self.col = max_cols
+            self.row -= 1 
         else:
-            self.col = self.cols - 1
-            self.row = self.row - 1
-         
+            if(len(self.active_group.coordinates) > self.pair + 1):
+                self.pair += 1
+            else:
+                prev_group = None
+                can_select = False
+                for _, group in reversed(self.groups.items()):
+                    if can_select:
+                        self.active_group = group
+                        break
+
+                    if(self.active_group == group):
+                        print("Curent group found")
+                        can_select = True
+
+                if prev_group == None:
+                    return False
+
+                self.pair = 0
+            self.row, self.col = self.active_group.coordinates[self.pair][0]
+
+        return True
+
     def accept_cell(self):
         index = 0 if pd.isnull(self.plate.accepted_fits.index.max()) else self.plate.accepted_fits.index.max() + 1
         title = self.title
