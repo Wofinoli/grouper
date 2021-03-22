@@ -37,6 +37,7 @@ class GUI:
         group_win = None
         start_win = self.make_start_win()
         plot_win = None
+        refit_win = None
 
         hasSelected = False
         start_row, start_col, end_row, end_col = -1,-1,-1,-1
@@ -115,22 +116,32 @@ class GUI:
                 self.plate.statistics = data_process.get_statistics(self.plate.accepted_fits)
                 self.to_excel()
 
+            if event == 'Try fit':
+                p0 = [values['v_rev'], values['g_max'], values['v_half'],
+                        values['v_slope']]
+
+                p0 = [float(val) for val in p0]
+                refit_win.close()
+                refit_win = None
+                plt.close()
+                self.draw_plot(p0)
 
             if event in ['Accept', 'Reject', 'Next', 'Previous', 'Re-fit']:
-                plt.close()
-                if event == 'Previous':
-                    self.prev_cell()
-                elif event == 'Re-fit':
-                    print("Reffiting")
+                if event == 'Re-fit':
+                    refit_win = self.make_refit_win()
                 else:
-                    if event == 'Accept':
-                        self.accept_cell()
-                    elif event == 'Reject':
-                        self.reject_cell()
+                    plt.close()
+                    if event == 'Previous':
+                        self.prev_cell()
+                    else:
+                        if event == 'Accept':
+                            self.accept_cell()
+                        if event == 'Reject':
+                            self.reject_cell()
 
-                    self.next_cell()
+                        self.next_cell()
+                    self.draw_plot()
 
-                self.draw_plot()
 
     def make_plate_win(self):
         menu_def = [['Groups', ['New group', 'Edit group', 'Finalize groups']],
@@ -169,11 +180,23 @@ class GUI:
         return sg.Window('Choose file', layout, size=(200,75), finalize = True)
 
     def make_plot_win(self):
-        layout = [[sg.Button("Accept"), sg.Button("Reject")],
+        layout = [[sg.Button("Accept"), sg.Button("Reject"), sg.Button("Re-fit")],
                   [sg.Button("Previous"), sg.Button("Next")],
                   [sg.Button("Write to Excel", key="excel")],]
 
         return sg.Window('Plots', layout, size=(300,110), finalize = True)
+
+    def make_refit_win(self):
+#vrev, gmax, vhalf, vslope
+        layout = [
+                [sg.Text('v_rev: '), sg.Input(key='v_rev')],
+                [sg.Text('g_max: '), sg.Input(key='g_max')],
+                [sg.Text('v_half: '), sg.Input(key='v_half')],
+                [sg.Text('v_slope: '), sg.Input(key='v_slope')],
+                [sg.Button('Try fit')]]
+
+        return sg.Window('Refit', layout, size=(300,150), finalize = True)
+
 
     def draw_plot(self, p0=[70,0.4,0.6,1]):
         plate = self.plate
