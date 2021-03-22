@@ -11,6 +11,7 @@ import math
 
 import group
 import data_process
+import fit
 
 class GUI:
 
@@ -32,6 +33,8 @@ class GUI:
         self.group_colors = {}
 
     def run(self):
+        fits = fit.Fits('fits/fits.pkl')
+
         plate_win = None#self.make_plate_win()      
         choose_group_win = None
         group_win = None
