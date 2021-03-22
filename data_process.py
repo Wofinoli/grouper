@@ -79,7 +79,7 @@ class Plate():
 
         self.source = pd.DataFrame(self.potentials, columns=["Potential"])
 
-        def create_dataframes(self):
+        def create_dataframes(self, variables):
             self.accepted_fits = pd.DataFrame(columns=["Cell", "v_rev","g_max","v_half","v_slope"])
             self.rejected_fits = pd.DataFrame(columns=["Cell", "v_rev","g_max","v_half","v_slope"])
             self.failed = pd.DataFrame(columns=["Failed"])

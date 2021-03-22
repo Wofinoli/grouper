@@ -31,14 +31,16 @@ class GUI:
         self.row = 0
         self.col = 0
         self.group_colors = {}
+        self.fit = None
 
     def run(self):
         fits = fit.Fits('fits/fits.pkl')
 
+        choose_fit_win = self.make_choose_fit_win(fits)
         plate_win = None#self.make_plate_win()      
         choose_group_win = None
         group_win = None
-        start_win = self.make_start_win()
+        start_win = None
         plot_win = None
         refit_win = None
 
@@ -96,6 +98,11 @@ class GUI:
                 choose_group_win.close()
                 choose_group_win = None
 
+            if event == 'choose_fit':
+                self.fit = values['choose_fit']
+                choose_fit_win.close()
+                start_win = self.make_start_win()
+
             if event == 'file_choose':
                 self.filename = values['file_choose']
                 self.plate = data_process.Plate(self.cols, self.rows, self.filename)
@@ -145,6 +152,13 @@ class GUI:
                         self.next_cell()
                     self.draw_plot()
 
+    def make_choose_fit_win(self, fits):
+        fit_names = [name for name in fits.fits]
+        layout = [[sg.Text("Choose Fit")],
+                [sg.Listbox(values=fit_names, key='choose_fit', enable_events=True,
+                    size=(15,10), select_mode="LISTBOX_SELECT_MODE_SINGLE")]]
+
+        return sg.Window('Choose Fit', layout, finalize=True)
 
     def make_plate_win(self):
         menu_def = [['Groups', ['New group', 'Edit group', 'Finalize groups']],
