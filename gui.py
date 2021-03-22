@@ -116,10 +116,12 @@ class GUI:
                 self.to_excel()
 
 
-            if event in ['Accept', 'Reject', 'Next', 'Previous']:
+            if event in ['Accept', 'Reject', 'Next', 'Previous', 'Re-fit']:
                 plt.close()
                 if event == 'Previous':
                     self.prev_cell()
+                elif event == 'Re-fit':
+                    print("Reffiting")
                 else:
                     if event == 'Accept':
                         self.accept_cell()
@@ -173,7 +175,7 @@ class GUI:
 
         return sg.Window('Plots', layout, size=(300,110), finalize = True)
 
-    def draw_plot(self):
+    def draw_plot(self, p0=[70,0.4,0.6,1]):
         plate = self.plate
         sodium_sweeps = self.plate.sodium_sweeps
         potentials = self.plate.potentials
@@ -196,7 +198,7 @@ class GUI:
            
         try:
             #bounds = ((65,-np.inf,-np.inf,-np.inf),(85,np.inf,np.inf,np.inf))
-            self.popt, pcov = curve_fit(data_process.func_IV_NA, potentials, self.ydata, p0=[70,0.4,0.6,1], maxfev=100000)
+            self.popt, pcov = curve_fit(data_process.func_IV_NA, potentials, self.ydata, p0=p0, maxfev=100000)
         except:
             print("Fit failed for " + self.title)
             index = 0 if pd.isnull(self.plate.failed.index.max()) else self.plate.failed.index.max() + 1
