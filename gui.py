@@ -279,11 +279,20 @@ class GUI:
             if(len(self.active_group.coordinates) > self.pair + 1):
                 self.pair += 1
             else:
-                try:
-                    _, self.active_group = next(self.group_iter)
-                except StopIteration:
-                    print("No more groups")
+                next_group = None
+                can_select = False
+                for _, group in self.groups.items():
+                    if can_select:
+                        self.active_group = group
+                        break
+
+                    if(self.active_group == group):
+                        print("Curent group found")
+                        can_select = True
+
+                if next_group == None:
                     return False
+
 
                 self.pair = 0
             self.row, self.col = self.active_group.coordinates[self.pair][0]
@@ -291,14 +300,35 @@ class GUI:
         return True
 
     def prev_cell(self):
-        if self.row == 0 and self.col == 0:
-            return
-
-        if self.col > 0:
+        max_rows, max_cols = self.active_group.coordinates[self.pair][1]
+        min_rows, min_cols = self.active_group.coordinates[self.pair][0]
+        if(self.col > min_cols):
             self.col -= 1
+        elif(self.row > min_rows):
+            self.col = max_cols
+            self.row -= 1 
         else:
-            self.col = self.cols - 1
-            self.row = self.row - 1
+            if(len(self.active_group.coordinates) > self.pair + 1):
+                self.pair += 1
+            else:
+                prev_group = None
+                can_select = False
+                for _, group in reversed(self.groups.items()):
+                    if can_select:
+                        self.active_group = group
+                        break
+
+                    if(self.active_group == group):
+                        print("Curent group found")
+                        can_select = True
+
+                if prev_group == None:
+                    return False
+
+                self.pair = 0
+            self.row, self.col = self.active_group.coordinates[self.pair][0]
+
+        return True
          
     def accept_cell(self):
         index = 0 if pd.isnull(self.plate.accepted_fits.index.max()) else self.plate.accepted_fits.index.max() + 1
