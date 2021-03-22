@@ -116,10 +116,12 @@ class GUI:
                 self.to_excel()
 
 
-            if event in ['Accept', 'Reject', 'Next', 'Previous']:
+            if event in ['Accept', 'Reject', 'Next', 'Previous', 'Re-fit']:
                 plt.close()
                 if event == 'Previous':
                     self.prev_cell()
+                elif event == 'Re-fit':
+                    print("Refitting")
                 else:
                     if event == 'Accept':
                         self.accept_cell()
@@ -167,13 +169,13 @@ class GUI:
         return sg.Window('Choose file', layout, size=(200,75), finalize = True)
 
     def make_plot_win(self):
-        layout = [[sg.Button("Accept"), sg.Button("Reject")],
+        layout = [[sg.Button("Accept"), sg.Button("Reject"), sg.Button("Re-fit")],
                   [sg.Button("Previous"), sg.Button("Next")],
                   [sg.Button("Write to Excel", key="excel")],]
 
         return sg.Window('Plots', layout, size=(300,110), finalize = True)
 
-    def draw_plot(self):
+    def draw_plot(self, p0=None):
         plate = self.plate
         sodium_sweeps = self.plate.sodium_sweeps
         potentials = self.plate.potentials
@@ -208,8 +210,8 @@ class GUI:
             return
 
         try:
-            #bounds = ((65,-np.inf,-np.inf,-np.inf),(85,np.inf,np.inf,np.inf))
-            p0 = [max(self.ydata), np.median(potentials), 1]
+            if p0 == None:
+                p0 = [max(self.ydata), np.median(potentials), 1]
             self.popt, pcov = curve_fit(data_process.func_SSI_rel, potentials, self.ydata, maxfev=100000, p0=p0)
         except:
             print("Fit failed for " + self.title)
@@ -290,7 +292,7 @@ class GUI:
                         print("Curent group found")
                         can_select = True
 
-                if next_group == None:
+                if prev_group == None:
                     return False
 
 
