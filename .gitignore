@@ -11,6 +11,7 @@ input/
 build/
 dist/
 *.spec
+fits.json
 .gitignore
 .nosync
 reqs.txt
