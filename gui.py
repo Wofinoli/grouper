@@ -267,6 +267,7 @@ class GUI:
         cumul_ax.set_title(self.active_group.name + " Cumulative")
         cumul_ax.set_xlabel("Potential (mV)")
         cumul_ax.set_ylabel("$G/G_{max}$")
+        cumul_ax.set_ylim(bottom=-0.2, top=1.2)
         cumul_ax.legend(custom_legend, ['Accepted', 'Rejected'])
 
         fig.canvas.draw()
