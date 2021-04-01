@@ -231,7 +231,6 @@ class GUI:
             #plt.close()
             success = False
     
-        label = 'fit: $v_{rev}=%5.3f, g_{max}=%5.3f, v_{0.5}=%5.3f, v_{slope}=%5.3f$' % tuple(self.popt)
 
         cell_ax.clear()
         cell_ax.set_title(self.active_group.name + "_" + self.title)
@@ -241,6 +240,7 @@ class GUI:
 
         if success:
             cell_ax.plot(potentials, self.ydata, 'b.', label="data")
+            label = 'fit: $v_{rev}=%5.3f, g_{max}=%5.3f, v_{0.5}=%5.3f, v_{slope}=%5.3f$' % tuple(self.popt)
             cell_ax.plot(x_range, data_process.func_IV_NA(x_range, *self.popt), 'r-', label=label)
             cell_ax.legend()
         
