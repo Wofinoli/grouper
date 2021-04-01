@@ -212,6 +212,7 @@ class GUI:
         write_col = 1
         self.ydata = []
         self.title = row_names[self.row] + "{:02d}".format(self.col + 1)
+        success = True
         for sweep in sodium_sweeps:
             self.ydata.append(sweep.iloc[self.row,self.col])
            
@@ -236,22 +237,22 @@ class GUI:
             print("Fit failed for " + self.title)
             index = 0 if pd.isnull(self.plate.failed.index.max()) else self.plate.failed.index.max() + 1
             self.plate.failed.loc[index] = self.title
-            plt.close()
-            if self.next_cell():
-                self.draw_plot()
-            return
+            success = False
     
-        label = 'fit: $f_{max}=%5.3f, v_{0.5}=%5.3f, k=%5.3f$' % tuple(self.popt)
         cell_ax.clear()
-        cell_ax.plot(potentials, self.ydata, 'b.', label="data")
         x_range = np.arange(min(potentials), max(potentials), 0.01)
-        cell_ax.plot(x_range, data_process.func_SSI_rel(x_range, *self.popt), 'r-', label=label)
         cell_ax.grid()
-        cell_ax.legend()
     
         cell_ax.set_title(self.active_group.name + "_" + self.title)
         cell_ax.set_xlabel("Potential (mV)")
         cell_ax.set_ylabel("$G/G_{max}$")
+
+        if success:
+            cell_ax.plot(potentials, self.ydata, 'b.', label="data")
+            label = 'fit: $f_{max}=%5.3f, v_{0.5}=%5.3f, k=%5.3f$' % tuple(self.popt)
+            cell_ax.plot(x_range, data_process.func_SSI_rel(x_range, *self.popt), 'r-', label=label)
+            cell_ax.legend()
+
 
         self.get_cumul(self.active_group.name)
         color = self.active_group.color
