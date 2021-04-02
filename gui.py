@@ -30,6 +30,7 @@ class GUI:
         self.row = 0
         self.col = 0
         self.group_colors = {}
+        self.popt = None
 
     def run(self):
         plate_win = None#self.make_plate_win()      
@@ -391,7 +392,8 @@ class GUI:
             return
 
         self.plate.rejected_fits.loc[index, 'Cell'] =  title
-        self.plate.rejected_fits.loc[index, 'v_rev':'v_slope'] = self.popt
+        if(self.popt is not None):
+            self.plate.rejected_fits.loc[index, 'v_rev':'v_slope'] = self.popt
         
     def get_button_size(self):
         height = self.height - self.padding - self.offset
