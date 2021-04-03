@@ -231,6 +231,7 @@ class GUI:
             self.plate.failed.loc[index] = self.title
             #plt.close()
             success = False
+            self.popt = None
     
 
         cell_ax.clear()
@@ -346,6 +347,9 @@ class GUI:
         return True
 
     def accept_cell(self):
+        if(self.popt is None):
+            return
+
         index = 0 if pd.isnull(self.plate.accepted_fits.index.max()) else self.plate.accepted_fits.index.max() + 1
         title = self.title
         for name, group in self.groups.items():
@@ -381,6 +385,9 @@ class GUI:
 
 
     def reject_cell(self):
+        if(self.popt is None):
+            return
+
         index = 0 if pd.isnull(self.plate.rejected_fits.index.max()) else self.plate.rejected_fits.index.max() + 1
         title = self.title
         for name, group in self.groups.items():
@@ -402,8 +409,7 @@ class GUI:
             return
 
         self.plate.rejected_fits.loc[index, 'Cell'] =  title
-        if(self.popt is not None):
-            self.plate.rejected_fits.loc[index, 'v_rev':'v_slope'] = self.popt
+        self.plate.rejected_fits.loc[index, 'v_rev':'v_slope'] = self.popt
         
     def get_button_size(self):
         height = self.height - self.padding - self.offset
