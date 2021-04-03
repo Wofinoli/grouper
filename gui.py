@@ -358,6 +358,10 @@ class GUI:
                 if self.row >= start_row and self.row <= end_row and self.col >= start_col and self.col <= end_col:
                     title = name + "_" + title
 
+        if title in self.plate.rejected_fits['Cell'].values:
+            idx = self.plate.rejected_fits[self.plate.rejected_fits['Cell'] == title].index
+            self.plate.rejected_fits.drop(idx, inplace=True)
+
         if title in self.plate.accepted_fits['Cell'].values:
             return
 
@@ -387,6 +391,10 @@ class GUI:
 
                 if self.row >= start_row and self.row <= end_row and self.col >= start_col and self.col <= end_col:
                     title = name + "_" + title
+
+        if title in self.plate.accepted_fits['Cell'].values:
+            idx = self.plate.accepted_fits[self.plate.accepted_fits['Cell'] == title].index
+            self.plate.accepted_fits.drop(idx, inplace=True)
 
         if title in self.plate.rejected_fits['Cell'].values:
             return
