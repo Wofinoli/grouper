@@ -294,18 +294,19 @@ class GUI:
             if(len(self.active_group.coordinates) > self.pair + 1):
                 self.pair += 1
             else:
-                next_group = None
+                next_group = False
                 can_select = False
                 for _, group in self.groups.items():
                     if can_select:
                         self.active_group = group
+                        next_group = True
                         break
 
                     if(self.active_group == group):
                         print("Current group found")
                         can_select = True
 
-                if next_group == None:
+                if not next_group:
                     return False
 
 
