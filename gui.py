@@ -286,6 +286,7 @@ class GUI:
     def next_cell(self):
         max_rows, max_cols = self.active_group.coordinates[self.pair][1]
         min_rows, min_cols = self.active_group.coordinates[self.pair][0]
+
         if(self.col < max_cols):
             self.col += 1
         elif(self.row < max_rows):
@@ -295,17 +296,18 @@ class GUI:
             if(len(self.active_group.coordinates) > self.pair + 1):
                 self.pair += 1
             else:
-                next_group = None
+                next_group = False
                 can_select = False
                 for _, group in self.groups.items():
                     if can_select:
                         self.active_group = group
+                        next_group = True
                         break
 
                     if(self.active_group == group):
                         can_select = True
 
-                if next_group == None:
+                if not next_group:
                     return False
 
 
