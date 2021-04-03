@@ -301,7 +301,7 @@ class GUI:
                         break
 
                     if(self.active_group == group):
-                        print("Curent group found")
+                        print("Current group found")
                         can_select = True
 
                 if next_group == None:
@@ -309,6 +309,7 @@ class GUI:
 
 
                 self.pair = 0
+
             self.row, self.col = self.active_group.coordinates[self.pair][0]
 
         return True
@@ -358,9 +359,14 @@ class GUI:
                 if self.row >= start_row and self.row <= end_row and self.col >= start_col and self.col <= end_col:
                     title = name + "_" + title
 
+        if title in self.plate.rejected_fits['Cell'].values:
+            idx = self.plate.rejected_fits[self.plate.rejected_fits['Cell'] == title].index
+            self.plate.rejected_fits.drop(idx, inplace=True)
+
         if title in self.plate.accepted_fits['Cell'].values:
             return
 
+        print("accepting " + self.title)
         self.plate.accepted_fits.loc[index, 'Cell'] =  title
         self.plate.accepted_fits.loc[index, 'v_rev':'v_slope'] = self.popt
         self.plate.source[title] = self.ydata
@@ -387,6 +393,10 @@ class GUI:
 
                 if self.row >= start_row and self.row <= end_row and self.col >= start_col and self.col <= end_col:
                     title = name + "_" + title
+
+        if title in self.plate.accepted_fits['Cell'].values:
+            idx = self.plate.accepted_fits[self.plate.accepted_fits['Cell'] == title].index
+            self.plate.accepted_fits.drop(idx, inplace=True)
 
         if title in self.plate.rejected_fits['Cell'].values:
             return
