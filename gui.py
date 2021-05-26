@@ -328,18 +328,19 @@ class GUI:
             if(len(self.active_group.coordinates) > self.pair + 1):
                 self.pair += 1
             else:
-                prev_group = None
+                prev_group = False
                 can_select = False
                 for _, group in reversed(self.groups.items()):
                     if can_select:
                         self.active_group = group
+                        prev_group = True
                         break
 
                     if(self.active_group == group):
                         print("Curent group found")
                         can_select = True
 
-                if prev_group == None:
+                if not prev_group:
                     return False
 
                 self.pair = 0
@@ -486,8 +487,11 @@ class GUI:
 
     def finalize_groups(self):
         for _, group in self.groups.items():
+            name = group.name
             coords = group.coordinates
             color = group.color
+
+            self.save_group(name, coords, color)
 
             for coord in coords:
                 start_row, start_col = coord[0]
@@ -496,6 +500,13 @@ class GUI:
                 for row in range(start_row, end_row+1):
                     for col in range(start_col, end_col+1):
                         self.group_colors[(row,col)] = color
+
+    def save_group(self, name, coords, color):
+        group_serial = "{} {} {}".format(name, coords, color)
+        sidecar_name = self.filename[self.filename.rfind('/') + 1:self.filename.rfind('.')] + ".grps"
+        print(group_serial)
+        print(sidecar_name)
+
 
     def get_group_statistics(self):
         rows = len(self.groups) * self.plate.accepted_fits.shape[1]
