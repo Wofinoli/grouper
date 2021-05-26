@@ -14,8 +14,6 @@ from scipy.optimize import curve_fit
 #from sklearn.preprocessing import MinMaxScaler
 from scipy import stats
 
-import fits
-
 warnings.filterwarnings("error")
 
 class Plate():
@@ -25,7 +23,7 @@ class Plate():
         self.rows = rows
         self.filename = filename
         self.read_file()
-        self.create_frames(fits)
+        self.create_frames(fit)
 
     def read_file(self):
         raw = pd.read_csv(self.filename, sep='\t', index_col=0)
@@ -80,10 +78,10 @@ class Plate():
 
         self.source = pd.DataFrame(self.potentials, columns=["Potential"])
 
-    def create_frames(fits):
-        print(fits)
-        self.accepted_fits = pd.DataFrame(columns=["Cell", "v_rev","g_max","v_half","v_slope"])
-        self.rejected_fits = pd.DataFrame(columns=["Cell", "v_rev","g_max","v_half","v_slope"])
+    def create_frames(self, fit):
+        columns = ["Cell"] + fit.variables[:-1]
+        self.accepted_fits = pd.DataFrame(columns=columns)
+        self.rejected_fits = pd.DataFrame(columns=columns)
         self.failed = pd.DataFrame(columns=["Failed"])
         self.statistics = pd.DataFrame(index=np.arange(0,self.accepted_fits.shape[1]-1), columns=["Variable","Mean","Median","Std. Dev","Std. Err","Max","Min","N"])
      

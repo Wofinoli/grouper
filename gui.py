@@ -98,7 +98,8 @@ class GUI:
 
             if event == 'start':
                 self.filename = values['file_choose']
-                self.plate = data_process.Plate(self.cols, self.rows, self.filename)
+                self.fit = self.fit_handler.choose_fit(values['choose_fit'][0])
+                self.plate = data_process.Plate(self.cols, self.rows, self.filename, self.fit)
                 start_win.close()
                 start_win = None
                 plate_win = self.make_plate_win()
