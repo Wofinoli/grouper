@@ -12,8 +12,11 @@ class Fit_Handler():
             self.fits = json.load(f)
 
     def list_fits(self):
+        names = []
         for fit, properties in self.fits.items():
-                print(fit)
+                names.append(fit)
+
+        return names
 
     def choose_fit(self, name):
         fit = self.fits[name]

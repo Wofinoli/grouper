@@ -14,20 +14,18 @@ from scipy.optimize import curve_fit
 #from sklearn.preprocessing import MinMaxScaler
 from scipy import stats
 
+import fits
 
 warnings.filterwarnings("error")
 
 class Plate():
 
-    def __init__(self, cols, rows, filename):
+    def __init__(self, cols, rows, filename, fit):
         self.cols = cols
         self.rows = rows
         self.filename = filename
         self.read_file()
-        self.accepted_fits = pd.DataFrame(columns=["Cell", "v_rev","g_max","v_half","v_slope"])
-        self.rejected_fits = pd.DataFrame(columns=["Cell", "v_rev","g_max","v_half","v_slope"])
-        self.failed = pd.DataFrame(columns=["Failed"])
-        self.statistics = pd.DataFrame(index=np.arange(0,self.accepted_fits.shape[1]-1), columns=["Variable","Mean","Median","Std. Dev","Std. Err","Max","Min","N"])
+        self.create_frames(fits)
 
     def read_file(self):
         raw = pd.read_csv(self.filename, sep='\t', index_col=0)
@@ -82,6 +80,12 @@ class Plate():
 
         self.source = pd.DataFrame(self.potentials, columns=["Potential"])
 
+    def create_frames(fits):
+        print(fits)
+        self.accepted_fits = pd.DataFrame(columns=["Cell", "v_rev","g_max","v_half","v_slope"])
+        self.rejected_fits = pd.DataFrame(columns=["Cell", "v_rev","g_max","v_half","v_slope"])
+        self.failed = pd.DataFrame(columns=["Failed"])
+        self.statistics = pd.DataFrame(index=np.arange(0,self.accepted_fits.shape[1]-1), columns=["Variable","Mean","Median","Std. Dev","Std. Err","Max","Min","N"])
      
 def func_IV_NA(v, vrev, gmax, vhalf, vslope): # IV
     return (v - vrev) * gmax/(1 + np.exp((vhalf - v)/vslope))

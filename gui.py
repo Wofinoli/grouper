@@ -11,6 +11,7 @@ import math
 
 import group
 import data_process
+import fits
 
 class GUI:
 
@@ -31,6 +32,7 @@ class GUI:
         self.col = 0
         self.group_colors = {}
         self.popt = None
+        self.fit_handler = fits.Fit_Handler()
 
     def run(self):
         plate_win = None#self.make_plate_win()      
@@ -94,7 +96,7 @@ class GUI:
                 choose_group_win.close()
                 choose_group_win = None
 
-            if event == 'file_choose':
+            if event == 'start':
                 self.filename = values['file_choose']
                 self.plate = data_process.Plate(self.cols, self.rows, self.filename)
                 start_win.close()
@@ -175,10 +177,16 @@ class GUI:
         return sg.Window('Choose Group', layout, finalize=True)
 
     def make_start_win(self):
+        fits = self.fit_handler.list_fits()
+        num_fits = len(fits)
         layout= [[sg.Text("Choose file",  size=(15,1))],
-                 [sg.In(visible=False, enable_events=True, key='file_choose'), sg.FileBrowse()]]
+                 [sg.In(visible=False, enable_events=True, key='file_choose'), sg.FileBrowse()],
+                 [sg.Text("Choose fit", size=(15,1))],
+                 [sg.Listbox(values=fits, key='choose_fit', enable_events=True,
+                    size=(15,num_fits), select_mode="LISTBOX_SELECT_MODE_SINGLE")],
+                 [sg.Button('start')]]
 
-        return sg.Window('Choose file', layout, size=(200,75), finalize = True)
+        return sg.Window('Start Window', layout, size=(200,150 + num_fits), finalize = True)
 
     def make_plot_win(self):
         layout = [[sg.Button("Accept"), sg.Button("Reject"), sg.Button("Re-fit")],
