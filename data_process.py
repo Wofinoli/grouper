@@ -22,8 +22,9 @@ class Plate():
         self.cols = cols
         self.rows = rows
         self.filename = filename
-        self.read_file()
+        self.fit = fit
         self.create_frames(fit)
+        self.read_file()
 
     def read_file(self):
         raw = pd.read_csv(self.filename, sep='\t', index_col=0)
@@ -55,31 +56,30 @@ class Plate():
         relevant_data = raw.loc['A01':, columns[bool_mask]]
 
         ########### SO FAR ONLY INA ############
-        # TODO: Add rest of parameters
-        self.potentials = []
-        self.sodium_sweeps = []
+        self.control = []
+        self.var_sweeps = []
 
         for index, param in enumerate(parameters):
             param = param.replace("/", "Per")
             
-            if param == "Sweep VoltagePerCurrent":
+            if param == self.fit['control']:
                 for sweep in range(1, self.num_sweeps+1):
                     col = self.num_param*(sweep-1) + index
-                    self.potentials.append(float(relevant_data.iloc[2,col]) * 1000)
+                    self.control.append(float(relevant_data.iloc[2,col]) * 1000)
                     
-            if param == "INa":
+            if param == self.fit['dependent']:
                 for sweep in range(1, self.num_sweeps+1):
                     col = self.num_param*(sweep-1) + (index)
-                    sodium_arr = relevant_data.iloc[:,col].astype(float).to_numpy()
-                    sodium_arr = sodium_arr.reshape(
+                    var_arr = relevant_data.iloc[:,col].astype(float).to_numpy()
+                    var_arr = var_arr.reshape(
                         self.rows, self.cols, order='F')
-                    clean_sweep = pd.DataFrame(data = sodium_arr, index=self.row_names, columns=range(1,self.cols+1))
-                    self.sodium_sweeps.append(clean_sweep * 10**12)
+                    clean_sweep = pd.DataFrame(data = var_arr, index=self.row_names, columns=range(1,self.cols+1))
+                    self.var_sweeps.append(clean_sweep * 10**12)
 
-        self.source = pd.DataFrame(self.potentials, columns=["Potential"])
+        self.source = pd.DataFrame(self.control, columns=["Potential"])
 
     def create_frames(self, fit):
-        columns = ["Cell"] + fit.variables[:-1]
+        columns = ["Cell"] + fit['variables'][:-1]
         self.accepted_fits = pd.DataFrame(columns=columns)
         self.rejected_fits = pd.DataFrame(columns=columns)
         self.failed = pd.DataFrame(columns=["Failed"])

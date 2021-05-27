@@ -1,7 +1,6 @@
 import sys
 import json
 import numpy as np
-import FunctionStringParser
 
 class Fit_Handler():
     def __init__(self):
@@ -13,39 +12,62 @@ class Fit_Handler():
 
     def list_fits(self):
         names = []
-        for fit, properties in self.fits.items():
+        for fit, _ in self.fits.items():
                 names.append(fit)
 
         return names
 
     def choose_fit(self, name):
         fit = self.fits[name]
-        return Fit(name, fit['variables'], fit['control'], fit['function'])
+        return Fit(fit)
+
+    @staticmethod
+    def handle_extra(extras, data):
+        for extra in extras: 
+            if extra == "norm_to_max":
+                data_max = max(data)
+                data = [d / data_max for d in data]
+        
+        return data
+
+    @staticmethod
+    def handle_p0(p0, data, ctrl):
+        result = []
+        for item in p0:
+            try:
+                num = float(item)
+                result.append(num)
+            except:
+                if item == "max":
+                    result.append(max(data))
+                elif item == "median":
+                    result.append(np.median(data))
+                elif item == "median_ctrl":
+                    result.append(np.median(ctrl))
+
+        return result
+
 
 class Fit():
 
-    def __init__(self, _name, _variables, _control, _function):
-        self.name = _name
-        self.variables = _variables
-        self.control = _control
-        self.func_string = _function
-        self.fsp = FunctionStringParser.FunctionStringParser()
+    def __init__(self, _fit):
+        self.fit = _fit
+        self.fit['function'] = self.eval(_fit['function'])
 
-    def eval(self, args):
-        num_var = len(self.variables)
-        num_arg = len(args)
-        if(num_var != num_arg):
-            sys.exit("Not the right amount of arguments. Got {} but expected {}.".format(num_arg,num_var))
+    def eval(self, func_string):
+        exp_string = "lambda {}".format(self['variables'][-1])
+        for idx in range(0, len(self['variables']) - 1):
+            exp_string += ",{}".format(self['variables'][idx])
 
-        exp_string = "" 
-        for idx in range(0, num_var):
-            if(len(exp_string) == 0):
-                exp_string = self.func_string
-
-            exp_string = exp_string.replace(self.variables[idx], str(args[idx]))
-
-        return self.fsp.eval(exp_string)
-
+        exp_string += ": {}".format(func_string)
+        print(exp_string)
+        fn = eval(exp_string)
+        return fn
+        #return self.fsp.eval(exp_string)
     
-    def __str__(self):
-        return "{}\t{}\t{}".format(self.name, self.variables, self.control)
+    def make_label(self):
+        #label = 'fit: $v_{rev}=%5.3f, g_{max}=%5.3f, v_{0.5}=%5.3f, v_{slope}=%5.3f$' % tuple(self.popt)
+        pass
+
+    def __getitem__(self, key):
+        return self.fit[key]
