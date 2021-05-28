@@ -620,7 +620,7 @@ class GUI:
         if not os.path.exists(path):
             os.makedirs(path)
 
-        filename = "RESULT_" + self.filename[last_sep:-4] + ".xlsx"
+        filename = "RESULT_" + self.fit.name + "_" + self.filename[last_sep:-4] + ".xlsx"
         filename = os.path.join(path, filename)
         with pd.ExcelWriter(filename) as writer: 
             name = "Result"
