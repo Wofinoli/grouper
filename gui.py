@@ -118,10 +118,9 @@ class GUI:
                 self.finalize_groups()
 
             if event == 'Load groups':
-                pass
-                #if not load_group_win:
-                    #load_group_win = self.make_load_group_win()
-                    #load_group_win.move(plate_win.current_location()[0], plate_win.current_location()[1])
+                if not load_group_win:
+                    load_group_win = self.make_load_group_win()
+                    load_group_win.move(plate_win.current_location()[0], plate_win.current_location()[1])
 
             if event == 'load_group_choose':
                 load_group_win.close()
@@ -207,7 +206,7 @@ class GUI:
                     size=(15,num_fits), select_mode="LISTBOX_SELECT_MODE_SINGLE")],
                  [sg.Button('start')]]
 
-        return sg.Window('Start Window', layout, size=(200,150 + num_fits), finalize = True)
+        return sg.Window('Start Window', layout, size=(200,200 + num_fits), finalize = True)
 
     def make_plot_win(self):
         layout = [[sg.Button("Accept"), sg.Button("Reject"), sg.Button("Re-fit")],
@@ -540,12 +539,10 @@ class GUI:
                         self.group_colors[(row,col)] = color
 
     def serialize_coordinates(self, coords):
-        try:
-            return json.dumps(coords)
-        except:
-            return coords
+        return json.dumps(coords)
 
     def deserialize_coordinates(self, cords_serial):
+        print(cords_serial)
         return np.array(json.loads(cords_serial))
 
     def save_group(self, name, coords, color):
@@ -577,7 +574,6 @@ class GUI:
             name, coords, color = group[0], group[1], group[2]
             self.add_group(color, name)
             self.loaded_groups.append(name)
-            print(coords)
             coords = self.deserialize_coordinates(coords)
             for coord in coords:
                 self.fill_cells(coord[0][0], coord[0][1], coord[1][0], coord[1][1])
