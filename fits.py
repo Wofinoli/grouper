@@ -60,7 +60,6 @@ class Fit():
             exp_string += ",{}".format(self['variables'][idx])
 
         exp_string += ": {}".format(func_string)
-        print(exp_string)
         fn = eval(exp_string)
         return fn
         #return self.fsp.eval(exp_string)

@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 import string
 import math
+import json
 
 import group
 import data_process
@@ -28,6 +29,7 @@ class GUI:
         self.button_size = self.get_button_size()
         self.groups = {}
         self.active_group = None
+        self.loaded_groups = []
         self.row = 0
         self.col = 0
         self.group_colors = {}
@@ -37,10 +39,11 @@ class GUI:
     def run(self):
         plate_win = None#self.make_plate_win()      
         choose_group_win = None
+        load_group_win = None
         group_win = None
-        start_win = self.make_start_win()
         plot_win = None
         refit_win = None
+        start_win = self.make_start_win()
 
         hasSelected = False
         start_row, start_col, end_row, end_col = -1,-1,-1,-1
@@ -114,6 +117,17 @@ class GUI:
                 self.draw_plot()
                 self.finalize_groups()
 
+            if event == 'Load groups':
+                pass
+                #if not load_group_win:
+                    #load_group_win = self.make_load_group_win()
+                    #load_group_win.move(plate_win.current_location()[0], plate_win.current_location()[1])
+
+            if event == 'load_group_choose':
+                load_group_win.close()
+                load_group_win = None
+                self.load_group(values['load_group_choose'])
+
             if event == 'excel':
                 plot_win.close()
                 plot_win = None
@@ -148,7 +162,7 @@ class GUI:
 
 
     def make_plate_win(self):
-        menu_def = [['Groups', ['New group', 'Edit group', 'Finalize groups']],
+        menu_def = [['Groups', ['New group', 'Edit group', 'Load groups', 'Finalize groups']],
                     ['Options',['Close']],]
         layout = [[sg.Menu(menu_def)],      
                [self.make_plate()],      
@@ -176,6 +190,12 @@ class GUI:
                     size=(15,10), select_mode="LISTBOX_SELECT_MODE_SINGLE")]]
 
         return sg.Window('Choose Group', layout, finalize=True)
+
+    def make_load_group_win(self):
+        layout= [[sg.Text("Choose file",  size=(15,1))],
+                 [sg.In(visible=False, enable_events=True, key='load_group_choose'), sg.FileBrowse()]]
+
+        return sg.Window('Load Group', layout, size=(200,100), finalize = True)
 
     def make_start_win(self):
         fits = self.fit_handler.list_fits()
@@ -519,11 +539,48 @@ class GUI:
                     for col in range(start_col, end_col+1):
                         self.group_colors[(row,col)] = color
 
+    def serialize_coordinates(self, coords):
+        try:
+            return json.dumps(coords)
+        except:
+            return coords
+
+    def deserialize_coordinates(self, cords_serial):
+        return np.array(json.loads(cords_serial))
+
     def save_group(self, name, coords, color):
-        group_serial = "{} {} {}".format(name, coords, color)
+        if name in self.loaded_groups:
+            return
+
+        serial_cords = self.serialize_coordinates(coords)
+        group_serial = "{};{};{}".format(name, serial_cords, color)
+        
+        path = os.path.join(os.getcwd(), "output")
+        if not os.path.exists(path):
+            os.makedirs(path)
+
         sidecar_name = self.filename[self.filename.rfind('/') + 1:self.filename.rfind('.')] + ".grps"
-        #print(group_serial)
-        #print(sidecar_name)
+        sidecar_name = os.path.join(path, sidecar_name)
+
+        with open(sidecar_name, "a") as sidecar:
+            sidecar.write(group_serial + "\n")
+        
+    def load_group(self, sidecar_name):
+        if not os.path.exists(sidecar_name):
+            return
+
+        with open(sidecar_name, 'r') as sidecar:
+            groups = sidecar.readlines()
+
+        for group in groups:
+            group = group.strip().split(';')
+            name, coords, color = group[0], group[1], group[2]
+            self.add_group(color, name)
+            self.loaded_groups.append(name)
+            print(coords)
+            coords = self.deserialize_coordinates(coords)
+            for coord in coords:
+                self.fill_cells(coord[0][0], coord[0][1], coord[1][0], coord[1][1])
 
 
     def get_group_statistics(self):
