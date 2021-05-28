@@ -251,12 +251,18 @@ class GUI:
             self.ydata.append(sweep.iloc[self.row,self.col])
            
         self.ydata = fits.Fit_Handler.handle_extra(self.fit['extras'], self.ydata)
-        p0 = fits.Fit_Handler.handle_p0(self.fit['p0'], self.ydata, control)
+
+        p0 = None
+        if(len(self.fit['p0']) > 0):
+            p0 = fits.Fit_Handler.handle_p0(self.fit['p0'], self.ydata, control)
 
         x_range = np.arange(min(control), max(control), 0.01)
         try:
             #bounds = ((65,-np.inf,-np.inf,-np.inf),(85,np.inf,np.inf,np.inf))
-            self.popt, pcov = curve_fit(self.fit['function'], control, self.ydata, p0=p0, maxfev=100000)
+            if p0:
+                self.popt, pcov = curve_fit(self.fit['function'], control, self.ydata, p0=p0, maxfev=100000)
+            else:
+                self.popt, pcov = curve_fit(self.fit['function'], control, self.ydata, maxfev=100000)
         except:
             print("Fit failed for " + self.title)
             index = 0 if pd.isnull(self.plate.failed.index.max()) else self.plate.failed.index.max() + 1
