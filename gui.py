@@ -134,11 +134,11 @@ class GUI:
                 self.to_excel()
 
             if event == 'Try fit':
-                p0 = self.make_guesses(values)
+                p0, bounds = self.make_guesses(values)
                 refit_win.close()
                 refit_win = None
                 plt.close()
-                self.draw_plot(p0)
+                self.draw_plot(p0, bounds)
 
             if event in ['Accept', 'Reject', 'Next', 'Previous', 'Re-fit']:
                 if event == 'Re-fit':
@@ -221,15 +221,23 @@ class GUI:
     def make_guesses(self, values):
         num_vars = len(self.fit['variables'])
         p0 = []
+        low_bound = [-np.inf] * (num_vars - 1)
+        upper_bound = [np.inf] * (num_vars - 1)
         for idx in range(0, num_vars - 1):
             variable = self.fit['variables'][idx]
-            p0.append(values[variable])
+            checkbox = "{}_box".format(variable)
+            val = values[variable]
+            p0.append(val)
+            if values[checkbox]:
+                low_bound[idx] = val
+                upper_bound[idx] = val
 
         p0 = [float(val) for val in p0]
+        bounds = (tuple(low_bound), tuple(upper_bound))
 
-        return p0
+        return p0, bounds
 
-    def draw_plot(self, p0 = None):
+    def draw_plot(self, p0 = None, bounds = None):
         plate = self.plate
         var_sweeps = self.plate.var_sweeps
         control = self.plate.control
@@ -259,9 +267,11 @@ class GUI:
 
         x_range = np.arange(min(control), max(control), 0.01)
         try:
-            #bounds = ((65,-np.inf,-np.inf,-np.inf),(85,np.inf,np.inf,np.inf))
             if p0:
-                self.popt, pcov = curve_fit(self.fit['function'], control, self.ydata, p0=p0, maxfev=100000)
+                if bounds:
+                    self.popt, pcov = curve_fit(self.fit['function'], control, self.ydata, p0=p0, bounds=bounds, maxfev=100000)
+                else:
+                    self.popt, pcov = curve_fit(self.fit['function'], control, self.ydata, p0=p0, maxfev=100000)
             else:
                 self.popt, pcov = curve_fit(self.fit['function'], control, self.ydata, maxfev=100000)
         except:
@@ -551,7 +561,8 @@ class GUI:
         for idx in range(0, num_var - 1):
             variable = self.fit['variables'][idx]
             label = "{}: ".format(variable)
-            row = [sg.Text(label), sg.Input(key=variable)]
+            checkbox = "{}_box".format(variable)
+            row = [sg.Text(label, size=(10,1)), sg.Input(key=variable, size=(10,1)), sg.Checkbox("hold fixed?", key=checkbox)]
             layout.append(row)
 
         layout.append([sg.Button('Try fit')])
