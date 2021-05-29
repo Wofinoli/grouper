@@ -22,9 +22,9 @@ class Fit_Handler():
         return Fit(fit)
 
     @staticmethod
-    def handle_extra(extras, data):
-        for extra in extras: 
-            if extra == "norm_to_max":
+    def handle_post(posts, data):
+        for post in posts: 
+            if post == "norm_to_max":
                 data_max = max(data)
                 data = [d / data_max for d in data]
         

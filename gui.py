@@ -260,7 +260,7 @@ class GUI:
         for sweep in var_sweeps:
             self.ydata.append(sweep.iloc[self.row,self.col])
            
-        self.ydata = fits.Fit_Handler.handle_extra(self.fit['extras'], self.ydata)
+        self.ydata = fits.Fit_Handler.handle_post(self.fit['post'], self.ydata)
 
         if(p0 is None and len(self.fit['p0']) > 0):
             p0 = fits.Fit_Handler.handle_p0(self.fit['p0'], self.ydata, control)
