@@ -233,11 +233,11 @@ class GUI:
 #vrev, gmax, vhalf, vslope
         layout = self.make_refit_layout()
 
-        return sg.Window('Refit', layout, size=(300,25*len(layout)), finalize = True)
+        return sg.Window('Refit', layout, size=(300,50 + 25*len(layout)), finalize = True)
 
     def make_fix_win(self):
         layout = self.make_fix_layout()
-        return sg.Window('Fix Values', layout, size=(300,25*len(layout)), finalize = True)
+        return sg.Window('Fix Values', layout, size=(300,50 + 25*len(layout)), finalize = True)
 
     def make_guesses(self, values):
         num_vars = len(self.fit['variables'])
@@ -642,12 +642,12 @@ class GUI:
         serial_cords = self.serialize_coordinates(coords)
         group_serial = "{};{};{}".format(name, serial_cords, color)
        
-        path = os.path.join(os.getcwd(), "output")
-        if not os.path.exists(path):
-            os.makedirs(path)
+        #path = os.path.join(os.getcwd(), "output")
+        #if not os.path.exists(path):
+        #    os.makedirs(path)
 
-        sidecar_name = self.filename[self.filename.rfind('/') + 1:self.filename.rfind('.')] + ".grps"
-        sidecar_name = os.path.join(path, sidecar_name)
+        sidecar_name = self.filename[0:self.filename.rfind('.')] + ".grps"
+        #sidecar_name = os.path.join(path, sidecar_name)
 
         with open(sidecar_name, "a") as sidecar:
             sidecar.write(group_serial + "\n")
