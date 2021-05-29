@@ -37,6 +37,7 @@ class GUI:
         self.fit_handler = fits.Fit_Handler()
         self.fixed = False
         self.fixed_vals = []
+        self.bounds = None
 
     def run(self):
         plate_win = None#self.make_plate_win()      
