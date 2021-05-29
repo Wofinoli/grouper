@@ -761,7 +761,7 @@ class GUI:
                 color = group.color
                 cell_format = workbook.add_format({'bg_color': color})
                 endcol = frame.shape[1] + startcol
-                endrow = startrow + 4 #Number of variables, TODO: refactor for generality
+                endrow = startrow + len(self.fit['variables']) - 1
                 worksheet.conditional_format(startrow + 1, startcol + 1, endrow, endcol,
                         {'type': 'cell',
                          'criteria': '!=',
