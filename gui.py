@@ -237,6 +237,14 @@ class GUI:
 
         return p0, bounds
 
+    def make_fit_label(self):
+        label = "fit:"
+        num_vars = len(self.fit['variables']) - 1
+        for idx in range(0, num_vars):
+            label += " {}=%5.3f,".format(self.fit['variables'][idx]) 
+
+        return label[0:-1]
+
     def draw_plot(self, p0 = None, bounds = None):
         plate = self.plate
         var_sweeps = self.plate.var_sweeps
@@ -291,8 +299,8 @@ class GUI:
 
         if success:
             cell_ax.plot(control, self.ydata, 'b.', label="data")
-            #label = 'fit: $v_{rev}=%5.3f, g_{max}=%5.3f, v_{0.5}=%5.3f, v_{slope}=%5.3f$' % tuple(self.popt)
-            cell_ax.plot(x_range, self.fit['function'](x_range, *self.popt), 'r-')#, label=label)
+            label = self.make_fit_label() % tuple(self.popt)
+            cell_ax.plot(x_range, self.fit['function'](x_range, *self.popt), 'r-', label=label)
             cell_ax.legend()
         
 
