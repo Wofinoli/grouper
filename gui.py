@@ -36,6 +36,7 @@ class GUI:
         self.popt = None
         self.fit_handler = fits.Fit_Handler()
         self.fixed = False
+        self.fixed_vals = []
 
     def run(self):
         plate_win = None#self.make_plate_win()      
@@ -118,6 +119,8 @@ class GUI:
             if event == 'Hold Fixed':
                 fix_win.close()
                 fix_win = None
+                if self.check_fixed(values):
+                    self.bounds = self.make_bounds(values)
                 plate_win = self.make_plate_win()
                 self.graph = plate_win['graph']
                 self.buttons = self.draw_buttons()
@@ -128,7 +131,7 @@ class GUI:
                 plot_win = self.make_plot_win()
                 self.set_start_cell()
                 if self.fixed:
-                    bounds = self.make_bounds(values)
+                    bounds = self.bounds
                 else:
                     bounds = None
                 self.draw_plot(bounds=bounds)
@@ -171,7 +174,7 @@ class GUI:
                             self.reject_cell()
 
                         self.next_cell()
-                    self.draw_plot()
+                    self.draw_plot(bounds=self.bounds)
 
 
     def make_plate_win(self):
@@ -251,13 +254,27 @@ class GUI:
             val = values[refit_key]
             p0.append(val)
             if values[checkbox]:
-                low_bound[idx] = val
-                upper_bound[idx] = val
+                val = float(val)
+                low_bound[idx] = np.nextafter(val, -np.inf) 
+                upper_bound[idx] = np.nextafter(val, np.inf)
 
         p0 = [float(val) for val in p0]
         bounds = (tuple(low_bound), tuple(upper_bound))
 
         return p0, bounds
+
+    def check_fixed(self, values):
+        num_vars = len(self.fit['variables']) - 1
+        for idx in range(0, num_vars):
+            variable = self.fit['variables'][idx]
+            fix_key = "{}_fix".format(variable)
+            val = values[fix_key]
+            if val != "":
+                self.fixed = True
+                return True
+
+        self.fixed = False
+        return False
 
     def make_bounds(self, values):
         num_vars = len(self.fit['variables']) - 1
@@ -268,11 +285,11 @@ class GUI:
             fix_key = "{}_fix".format(variable)
             val = values[fix_key]
             if val != "":
-                low_bound[idx] = float(val)
-                upper_bound[idx] = float(val)
+                val = float(val)
+                low_bound[idx] = np.nextafter(val, -np.inf) 
+                upper_bound[idx] = np.nextafter(val, np.inf) 
 
         bounds = (tuple(low_bound), tuple(upper_bound))
-        print(bounds)
         return bounds
 
     def make_fit_label(self):
@@ -320,8 +337,9 @@ class GUI:
                     self.popt, pcov = curve_fit(self.fit['function'], control, self.ydata, p0=p0, maxfev=100000)
             else:
                 self.popt, pcov = curve_fit(self.fit['function'], control, self.ydata, maxfev=100000)
-        except:
+        except Exception as e:
             print("Fit failed for " + self.title)
+            print(e)
             index = 0 if pd.isnull(self.plate.failed.index.max()) else self.plate.failed.index.max() + 1
             self.plate.failed.loc[index] = self.title
             #plt.close()
