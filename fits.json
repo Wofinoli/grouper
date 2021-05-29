@@ -5,6 +5,7 @@
          "dependent": "INa",
          "control": "Sweep VoltagePerCurrent",
          "function": "(v - v_rev) * g_max/(1+np.exp((v_half - v)/v_slope))",
+         "pre": [],
          "post": [],
          "labels": ["Potential (mV)", "Current (pA)"],
          "p0": [70,0.4,0.6,1]
@@ -15,6 +16,7 @@
          "dependent": "IK",
          "control": "Sweep VoltagePerCurrent",
          "function": "(v - v_rev) * g_max/(1+np.exp((v_half - v)/v_slope))",
+         "pre": ["fix"],
          "post": [],
          "labels": ["Potential (mV)", "Current (pA)"],
          "p0": [70,0.4,0.6,1]
@@ -25,6 +27,7 @@
          "dependent": "Rel.Inact.",
          "control": "Sweep VoltagePerCurrent",
          "function": "f_max / (1 + np.exp((v - v_half)/k))",
+         "pre": [],
          "post": ["norm_to_max"],
          "labels": ["Potential (mV)", "$G/G_{max}$"],
          "p0": ["max", "median_ctrl", 1]

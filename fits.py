@@ -22,6 +22,11 @@ class Fit_Handler():
         return Fit(fit)
 
     @staticmethod
+    def handle_pre(pre, values):
+        print(values)
+
+
+    @staticmethod
     def handle_post(posts, data):
         for post in posts: 
             if post == "norm_to_max":
