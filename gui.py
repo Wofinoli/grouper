@@ -134,10 +134,7 @@ class GUI:
                 self.to_excel()
 
             if event == 'Try fit':
-                p0 = [values['v_rev'], values['g_max'], values['v_half'],
-                        values['v_slope']]
-
-                p0 = [float(val) for val in p0]
+                p0 = self.make_guesses(values)
                 refit_win.close()
                 refit_win = None
                 plt.close()
@@ -217,17 +214,22 @@ class GUI:
 
     def make_refit_win(self):
 #vrev, gmax, vhalf, vslope
-        layout = [
-                [sg.Text('v_rev: '), sg.Input(key='v_rev')],
-                [sg.Text('g_max: '), sg.Input(key='g_max')],
-                [sg.Text('v_half: '), sg.Input(key='v_half')],
-                [sg.Text('v_slope: '), sg.Input(key='v_slope')],
-                [sg.Button('Try fit')]]
+        layout = self.make_refit_layout()
 
-        return sg.Window('Refit', layout, size=(300,150), finalize = True)
+        return sg.Window('Refit', layout, size=(300,25*len(layout)), finalize = True)
 
+    def make_guesses(self, values):
+        num_vars = len(self.fit['variables'])
+        p0 = []
+        for idx in range(0, num_vars - 1):
+            variable = self.fit['variables'][idx]
+            p0.append(values[variable])
 
-    def draw_plot(self):
+        p0 = [float(val) for val in p0]
+
+        return p0
+
+    def draw_plot(self, p0 = None):
         plate = self.plate
         var_sweeps = self.plate.var_sweeps
         control = self.plate.control
@@ -252,8 +254,7 @@ class GUI:
            
         self.ydata = fits.Fit_Handler.handle_extra(self.fit['extras'], self.ydata)
 
-        p0 = None
-        if(len(self.fit['p0']) > 0):
+        if(p0 is None and len(self.fit['p0']) > 0):
             p0 = fits.Fit_Handler.handle_p0(self.fit['p0'], self.ydata, control)
 
         x_range = np.arange(min(control), max(control), 0.01)
@@ -544,6 +545,20 @@ class GUI:
                     for col in range(start_col, end_col+1):
                         self.group_colors[(row,col)] = color
 
+    def make_refit_layout(self):
+        layout = []
+        num_var = len(self.fit['variables'])
+        for idx in range(0, num_var - 1):
+            variable = self.fit['variables'][idx]
+            label = "{}: ".format(variable)
+            row = [sg.Text(label), sg.Input(key=variable)]
+            layout.append(row)
+
+        layout.append([sg.Button('Try fit')])
+        return layout
+
+
+
     def serialize_coordinates(self, coords):
         return json.dumps(coords)
 
@@ -557,7 +572,7 @@ class GUI:
 
         serial_cords = self.serialize_coordinates(coords)
         group_serial = "{};{};{}".format(name, serial_cords, color)
-        
+       
         path = os.path.join(os.getcwd(), "output")
         if not os.path.exists(path):
             os.makedirs(path)

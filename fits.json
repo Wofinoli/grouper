@@ -4,6 +4,7 @@
          "variables": ["v_rev", "g_max", "v_half", "v_slope", "v"],
          "dependent": "INa",
          "control": "Sweep VoltagePerCurrent",
+         "function": "(v - v_rev) * g_max/(1+np.exp((v_half - v)/v_slope))",
          "extras": [],
          "labels": ["Potential (mV)", "Current (pA)"],
          "p0": [70,0.4,0.6,1]
