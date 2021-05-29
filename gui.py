@@ -252,10 +252,9 @@ class GUI:
             variable = self.fit['variables'][idx]
             refit_key = "{}_refit".format(variable)
             checkbox = "{}_box".format(variable)
-            val = values[refit_key]
+            val = float(values[refit_key])
             p0.append(val)
             if values[checkbox]:
-                val = float(val)
                 low_bound[idx] = np.nextafter(val, -np.inf) 
                 upper_bound[idx] = np.nextafter(val, np.inf)
 
