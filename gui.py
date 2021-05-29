@@ -324,9 +324,13 @@ class GUI:
             self.ydata.append(sweep.iloc[self.row,self.col])
            
         self.ydata = fits.Fit_Handler.handle_post(self.fit['post'], self.ydata)
-
         if(p0 is None and len(self.fit['p0']) > 0):
             p0 = fits.Fit_Handler.handle_p0(self.fit['p0'], self.ydata, control)
+
+        if self.fit['name'] == 'Itail_rel':
+            mask = [val > 0 for val in self.ydata]
+            self.ydata = np.array(self.ydata)[mask]
+            control = np.array(control)[mask]
 
         x_range = np.arange(min(control), max(control), 0.01)
         try:
