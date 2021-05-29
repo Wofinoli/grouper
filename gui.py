@@ -35,6 +35,7 @@ class GUI:
         self.group_colors = {}
         self.popt = None
         self.fit_handler = fits.Fit_Handler()
+        self.fixed = False
 
     def run(self):
         plate_win = None#self.make_plate_win()      
@@ -43,6 +44,7 @@ class GUI:
         group_win = None
         plot_win = None
         refit_win = None
+        fix_win = None
         start_win = self.make_start_win()
 
         hasSelected = False
@@ -105,6 +107,17 @@ class GUI:
                 self.plate = data_process.Plate(self.cols, self.rows, self.filename, self.fit)
                 start_win.close()
                 start_win = None
+                    
+                if self.fit['fix']:
+                    fix_win = self.make_fix_win()
+                else:
+                    plate_win = self.make_plate_win()
+                    self.graph = plate_win['graph']
+                    self.buttons = self.draw_buttons()
+            
+            if event == 'Hold Fixed':
+                fix_win.close()
+                fix_win = None
                 plate_win = self.make_plate_win()
                 self.graph = plate_win['graph']
                 self.buttons = self.draw_buttons()
@@ -114,7 +127,11 @@ class GUI:
                 plate_win = None
                 plot_win = self.make_plot_win()
                 self.set_start_cell()
-                self.draw_plot()
+                if self.fixed:
+                    bounds = self.make_bounds(values)
+                else:
+                    bounds = None
+                self.draw_plot(bounds=bounds)
                 self.finalize_groups()
 
             if event == 'Load groups':
@@ -218,6 +235,10 @@ class GUI:
 
         return sg.Window('Refit', layout, size=(300,25*len(layout)), finalize = True)
 
+    def make_fix_win(self):
+        layout = self.make_fix_layout()
+        return sg.Window('Fix Values', layout, size=(300,25*len(layout)), finalize = True)
+
     def make_guesses(self, values):
         num_vars = len(self.fit['variables'])
         p0 = []
@@ -225,8 +246,9 @@ class GUI:
         upper_bound = [np.inf] * (num_vars - 1)
         for idx in range(0, num_vars - 1):
             variable = self.fit['variables'][idx]
+            refit_key = "{}_refit".format(variable)
             checkbox = "{}_box".format(variable)
-            val = values[variable]
+            val = values[refit_key]
             p0.append(val)
             if values[checkbox]:
                 low_bound[idx] = val
@@ -236,6 +258,22 @@ class GUI:
         bounds = (tuple(low_bound), tuple(upper_bound))
 
         return p0, bounds
+
+    def make_bounds(self, values):
+        num_vars = len(self.fit['variables']) - 1
+        low_bound = [-np.inf] * (num_vars)
+        upper_bound = [np.inf] * (num_vars)
+        for idx in range(0, num_vars):
+            variable = self.fit['variables'][idx]
+            fix_key = "{}_fix".format(variable)
+            val = values[fix_key]
+            if val != "":
+                low_bound[idx] = float(val)
+                upper_bound[idx] = float(val)
+
+        bounds = (tuple(low_bound), tuple(upper_bound))
+        print(bounds)
+        return bounds
 
     def make_fit_label(self):
         label = "fit:"
@@ -568,15 +606,27 @@ class GUI:
         num_var = len(self.fit['variables'])
         for idx in range(0, num_var - 1):
             variable = self.fit['variables'][idx]
+            refit_key = "{}_refit".format(variable)
             label = "{}: ".format(variable)
             checkbox = "{}_box".format(variable)
-            row = [sg.Text(label, size=(10,1)), sg.Input(key=variable, size=(10,1)), sg.Checkbox("hold fixed?", key=checkbox)]
+            row = [sg.Text(label, size=(10,1)), sg.Input(key=refit_key, size=(10,1)), sg.Checkbox("hold fixed?", key=checkbox)]
             layout.append(row)
 
         layout.append([sg.Button('Try fit')])
         return layout
 
+    def make_fix_layout(self):
+        layout = []
+        num_var = len(self.fit['variables'])
+        for idx in range(0, num_var - 1):
+            variable = self.fit['variables'][idx]
+            fix_key = "{}_fix".format(variable)
+            label = "{}: ".format(variable)
+            row = [sg.Text(label, size=(10,1)), sg.Input(key=fix_key, size=(10,1))]
+            layout.append(row)
 
+        layout.append([sg.Button('Hold Fixed')])
+        return layout
 
     def serialize_coordinates(self, coords):
         return json.dumps(coords)
