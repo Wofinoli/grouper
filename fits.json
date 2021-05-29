@@ -10,6 +10,17 @@
          "labels": ["Potential (mV)", "Current (pA)"],
          "p0": [70,0.4,0.6,1]
     },
+    "Itail_IV": {
+         "name": "Itail_IV",
+         "variables": ["v_rev", "g_max", "v_half", "v_slope", "v"],
+         "dependent": "Itail",
+         "control": "Sweep VoltagePerCurrent",
+         "function": "(v - v_rev) * g_max/(1+np.exp((v_half - v)/v_slope))",
+         "fix": true,
+         "post": [],
+         "labels": ["Potential (mV)", "Current (pA)"],
+         "p0": [70,0.4,0.6,1]
+    },
     "IK_IV": {
          "name": "IK_IV",
          "variables": ["v_rev", "g_max", "v_half", "v_slope", "v"],
