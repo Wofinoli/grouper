@@ -10,17 +10,6 @@
          "labels": ["Potential (mV)", "Current (pA)"],
          "p0": [70,0.4,0.6,1]
     },
-    "Itail_IV": {
-         "name": "Itail_IV",
-         "variables": ["v_rev", "g_max", "v_half", "v_slope", "v"],
-         "dependent": "Itail",
-         "control": "Sweep VoltagePerCurrent",
-         "function": "(v - v_rev) * g_max/(1+np.exp((v_half - v)/v_slope))",
-         "fix": true,
-         "post": [],
-         "labels": ["Potential (mV)", "Current (pA)"],
-         "p0": [70,0.4,0.6,1]
-    },
     "IK_IV": {
          "name": "IK_IV",
          "variables": ["v_rev", "g_max", "v_half", "v_slope", "v"],
@@ -42,6 +31,17 @@
          "post": ["norm_to_max"],
          "labels": ["Potential (mV)", "$G/G_{max}$"],
          "p0": ["max", "median_ctrl", 1]
-    }
+    },
+    "Itail_rel": {
+         "name": "Itail_rel",
+         "variables": ["f_max", "v_half", "k", "v"],
+         "dependent": "Itail",
+         "control": "Sweep VoltagePerCurrent",
+         "function": "f_max / (1 + np.exp((v - v_half)/k))",
+         "fix": true,
+         "post": ["norm_to_max"],
+         "labels": ["Potential (mV)", "$G/G_{max}$"],
+         "p0": ["max", "median_ctrl", 1]
+    } 
 }
 
