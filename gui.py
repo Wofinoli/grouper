@@ -328,9 +328,11 @@ class GUI:
             p0 = fits.Fit_Handler.handle_p0(self.fit['p0'], self.ydata, control)
 
         if self.fit['name'] == 'Itail_rel':
-            mask = [val > 0 for val in self.ydata]
-            self.ydata = np.array(self.ydata)[mask]
-            control = np.array(control)[mask]
+            #mask = [val > 0 for val in self.ydata]
+            #self.ydata = np.array(self.ydata)[mask]
+            self.ydata = 2.*(self.ydata - np.min(self.ydata))/np.ptp(self.ydata)-1
+            
+            #control = np.array(control)[mask]
 
         x_range = np.arange(min(control), max(control), 0.01)
         try:
@@ -608,6 +610,10 @@ class GUI:
         self.active_group = new_group
 
     def finalize_groups(self):
+        sidecar_name = self.filename[0:self.filename.rfind('.')] + ".grps"
+        if os.path.exists(sidecar_name):
+            os.remove(sidecar_name)
+
         for _, group in self.groups.items():
             name = group.name
             coords = group.coordinates
@@ -654,14 +660,14 @@ class GUI:
         return json.dumps(coords)
 
     def deserialize_coordinates(self, cords_serial):
-        print(cords_serial)
         return np.array(json.loads(cords_serial))
 
     def save_group(self, name, coords, color):
         if name in self.loaded_groups:
-            return
-
-        serial_cords = self.serialize_coordinates(coords)
+            coords = np.array(coords, dtype=int)
+            serial_cords = self.serialize_coordinates(coords.tolist())
+        else:
+            serial_cords = self.serialize_coordinates(coords)
         group_serial = "{};{};{}".format(name, serial_cords, color)
        
         #path = os.path.join(os.getcwd(), "output")
