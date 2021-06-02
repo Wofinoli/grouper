@@ -152,6 +152,7 @@ class GUI:
                 plot_win.close()
                 plot_win = None
                 self.plate.statistics = data_process.get_statistics(self.plate.accepted_fits)
+                self.finalize_failed()
                 self.to_excel()
 
             if event == 'Try fit':
@@ -346,8 +347,7 @@ class GUI:
         except Exception as e:
             print("Fit failed for " + self.title)
             print(e)
-            index = 0 if pd.isnull(self.plate.failed.index.max()) else self.plate.failed.index.max() + 1
-            self.plate.failed.loc[index] = self.title
+            self.add_to_failed(self.active_group.name, self.title)
             #plt.close()
             success = False
             self.popt = None
@@ -384,6 +384,13 @@ class GUI:
 
         fig.canvas.draw()
 
+    def add_to_failed(self, group, title):
+        if group in self.plate.failed.columns and title in self.plate.failed[group].values:
+            return
+
+        additional = pd.DataFrame({group : [title]})
+        self.plate.failed = pd.concat([self.plate.failed, additional], axis=0)
+            
     def get_cumul(self, group):
         current = self.plate.accepted_fits[self.plate.accepted_fits['Cell'].str.startswith(group)]
         return current.loc[:, current.columns != 'Cell'].to_numpy()
@@ -725,6 +732,8 @@ class GUI:
          
         return statistics
 
+    def finalize_failed(self):
+        self.plate.failed = self.plate.failed.apply(lambda x: pd.Series(x.dropna().values))
 
     def to_excel(self):
         last_sep = self.filename.rindex("/") + 1
@@ -742,19 +751,21 @@ class GUI:
 
             startrow, startcol = 0, 0
 
-            self.plate.accepted_fits.to_excel(writer,sheet_name=name,startrow=startrow, startcol=startcol)
+            self.write_frame(self.plate.accepted_fits, writer, name, startrow, startcol)
+
             self.format_sheet(writer, workbook, worksheet, startrow, startcol, self.plate.accepted_fits, 'Cell')
 
             startcol = self.plate.accepted_fits.shape[1] + 2
             startrow = self.plate.statistics.shape[0] + 2
-            self.plate.statistics.to_excel(writer,sheet_name=name,startrow=0, startcol=startcol)
-            self.plate.failed.to_excel(writer,sheet_name=name, startrow=startrow, startcol=startcol)
+            self.write_frame(self.plate.statistics, writer, name, 0, startcol)
+
+            worksheet.write(startrow, startcol, "Failed")
+            self.write_frame(self.plate.failed, writer, name, startrow, startcol)
             
             startrow += self.plate.failed.shape[0] + 2
             group_statistics = self.get_group_statistics()
-            group_statistics.to_excel(writer, sheet_name=name, startrow=startrow, startcol=startcol)
+            self.write_frame(group_statistics, writer, name, startrow, startcol)
             self.format_sheet(writer,workbook,worksheet,startrow,startcol,group_statistics,'Group')
-
 
             source_sheet = workbook.add_worksheet('source')
             writer.sheets['source'] = source_sheet
@@ -767,6 +778,9 @@ class GUI:
             conductance_cols[0] = True
 
             self.plate.source.loc[:, conductance_cols].to_excel(writer, sheet_name='source', startrow = source_height, startcol=0)
+
+    def write_frame(self, frame, writer, name, startrow, startcol): 
+        frame.to_excel(writer,sheet_name=name,startrow=startrow, startcol=startcol)
             
     def format_sheet(self, writer, workbook, worksheet, startrow, startcol, frame, key):
         if key == 'Cell':

@@ -82,7 +82,7 @@ class Plate():
         columns = ["Cell"] + fit['variables'][:-1]
         self.accepted_fits = pd.DataFrame(columns=columns)
         self.rejected_fits = pd.DataFrame(columns=columns)
-        self.failed = pd.DataFrame(columns=["Failed"])
+        self.failed = pd.DataFrame()
         self.statistics = pd.DataFrame(index=np.arange(0,self.accepted_fits.shape[1]-1), columns=["Variable","Mean","Median","Std. Dev","Std. Err","Max","Min","N"])
      
 def func_IV_NA(v, vrev, gmax, vhalf, vslope): # IV
