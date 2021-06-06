@@ -513,7 +513,6 @@ class GUI:
         title += "_G"
         self.plate.source[title] = normalized_g
 
-
     def reject_cell(self):
         if(self.popt is None):
             return
@@ -744,6 +743,7 @@ class GUI:
         filename = "RESULT_" + self.fit['name'] + "_" + self.filename[last_sep:-4] + ".xlsx"
         filename = os.path.join(path, filename)
         with pd.ExcelWriter(filename) as writer: 
+            # Result Sheet
             name = "Result"
             workbook = writer.book
             worksheet = workbook.add_worksheet(name)
@@ -767,6 +767,11 @@ class GUI:
             self.write_frame(group_statistics, writer, name, startrow, startcol)
             self.format_sheet(writer,workbook,worksheet,startrow,startcol,group_statistics,'Group')
 
+            startcol += self.plate.statistics.shape[1] + 1
+            bold = workbook.add_format({'bold': True})
+            self.write_fits(writer, worksheet, name, startrow=0, startcol=startcol, style=bold)
+            # Source Sheet
+
             source_sheet = workbook.add_worksheet('source')
             writer.sheets['source'] = source_sheet
 
@@ -781,6 +786,24 @@ class GUI:
 
     def write_frame(self, frame, writer, name, startrow, startcol): 
         frame.to_excel(writer,sheet_name=name,startrow=startrow, startcol=startcol)
+
+    def write_fits(self, writer, worksheet, name, startrow, startcol, style):
+        num_vars = len(self.fit['variables']) - 1
+        sep = 1
+
+        for idx in range(0, num_vars):
+            var = self.fit['variables'][idx]
+            startcol += sep
+            write_col = startcol
+            worksheet.write(startrow, write_col, var, style)
+            for group in self.groups.keys():
+                current = self.plate.accepted_fits[self.plate.accepted_fits['Cell'].str.startswith(group)]
+                write_col += 1
+                var_frame = current[var]
+                var_frame = var_frame.rename("{}_{}".format(group, var))
+                var_frame.to_excel(writer, sheet_name=name, startrow=startrow, startcol=write_col, index=False)
+            startcol += len(self.groups) + sep
+
             
     def format_sheet(self, writer, workbook, worksheet, startrow, startcol, frame, key):
         if key == 'Cell':
