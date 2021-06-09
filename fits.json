@@ -19,7 +19,7 @@
          "fix": true,
          "post": [],
          "labels": ["Potential (mV)", "Current (pA)"],
-         "p0": [70,0.4,0.6,1]
+         "p0": []
     },
     "SSI_rel": {
          "name": "SSI_rel",

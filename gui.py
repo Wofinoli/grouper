@@ -46,7 +46,7 @@ class GUI:
         group_win = None
         plot_win = None
         refit_win = None
-        fix_win = None
+        p0_win = None
         start_win = self.make_start_win()
 
         hasSelected = False
@@ -111,15 +111,15 @@ class GUI:
                 start_win = None
                     
                 if self.fit['fix']:
-                    fix_win = self.make_fix_win()
+                    p0_win = self.make_p0_win()
                 else:
                     plate_win = self.make_plate_win()
                     self.graph = plate_win['graph']
                     self.buttons = self.draw_buttons()
             
-            if event == 'Hold Fixed':
-                fix_win.close()
-                fix_win = None
+            if event == 'Continue':
+                p0_win.close()
+                p0_win = None
                 if self.check_fixed(values):
                     self.bounds = self.make_bounds(values)
                 plate_win = self.make_plate_win()
@@ -239,9 +239,9 @@ class GUI:
 
         return sg.Window('Refit', layout, size=(300,50 + 25*len(layout)), finalize = True)
 
-    def make_fix_win(self):
-        layout = self.make_fix_layout()
-        return sg.Window('Fix Values', layout, size=(300,50 + 25*len(layout)), finalize = True)
+    def make_p0_win(self):
+        layout = self.make_p0_layout()
+        return sg.Window('Initial Conditions', layout, size=(300,50 + 25*len(layout)), finalize = True)
 
     def make_guesses(self, values):
         num_vars = len(self.fit['variables'])
@@ -280,6 +280,7 @@ class GUI:
         num_vars = len(self.fit['variables']) - 1
         low_bound = [-np.inf] * (num_vars)
         upper_bound = [np.inf] * (num_vars)
+        fixed_vals = [None] * num_vars
         for idx in range(0, num_vars):
             variable = self.fit['variables'][idx]
             fix_key = "{}_fix".format(variable)
@@ -288,8 +289,12 @@ class GUI:
                 val = float(val)
                 low_bound[idx] = np.nextafter(val, -np.inf) 
                 upper_bound[idx] = np.nextafter(val, np.inf) 
+                fixed_vals[idx] = val
 
         bounds = (tuple(low_bound), tuple(upper_bound))
+        fits.Fit_Handler.make_lambda(fixed_vals, self.fit)
+        #self.fit['lambda'] = Fit_Handler.make_lambda(fixed_vals, self.fit)
+
         return bounds
 
     def make_fit_label(self):
@@ -338,11 +343,11 @@ class GUI:
         try:
             if p0:
                 if bounds:
-                    self.popt, pcov = curve_fit(self.fit['function'], control, self.ydata, p0=p0, bounds=bounds, maxfev=100000)
+                    self.popt, pcov = curve_fit(self.fit['lambda'], control, self.ydata, p0=p0, bounds=bounds, maxfev=100000)
                 else:
-                    self.popt, pcov = curve_fit(self.fit['function'], control, self.ydata, p0=p0, maxfev=100000)
+                    self.popt, pcov = curve_fit(self.fit['lambda'], control, self.ydata, p0=p0, maxfev=100000)
             else:
-                self.popt, pcov = curve_fit(self.fit['function'], control, self.ydata, maxfev=100000)
+                self.popt, pcov = curve_fit(self.fit['lambda'], control, self.ydata, maxfev=100000)
         except Exception as e:
             print("Fit failed for " + self.title)
             print(e)
@@ -362,7 +367,7 @@ class GUI:
         if success:
             cell_ax.plot(control, self.ydata, 'b.', label="data")
             label = self.make_fit_label() % tuple(self.popt)
-            cell_ax.plot(x_range, self.fit['function'](x_range, *self.popt), 'r-', label=label)
+            cell_ax.plot(x_range, self.fit['lambda'](x_range, *self.popt), 'r-', label=label)
             cell_ax.legend()
         
 
@@ -371,10 +376,10 @@ class GUI:
         custom_legend = [Line2D([0],[0], color=color, lw=4),
                          Line2D([0],[0], color='black', lw=4)]
         for fit in self.get_cumul(self.active_group.name):
-            cumul_ax.plot(x_range, self.fit['function'](x_range, *fit), '-', color=color)
+            cumul_ax.plot(x_range, self.fit['lambda'](x_range, *fit), '-', color=color)
 
         for fit in self.get_rejected_fits(self.active_group.name):
-            cumul_ax.plot(x_range, self.fit['function'](x_range, *fit), '-', color='black')
+            cumul_ax.plot(x_range, self.fit['lambda'](x_range, *fit), '-', color='black')
 
         cumul_ax.grid()
         cumul_ax.set_title(self.active_group.name + " Cumulative")
@@ -643,17 +648,18 @@ class GUI:
         layout.append([sg.Button('Try fit')])
         return layout
 
-    def make_fix_layout(self):
+    def make_p0_layout(self):
         layout = []
         num_var = len(self.fit['variables'])
         for idx in range(0, num_var - 1):
             variable = self.fit['variables'][idx]
             fix_key = "{}_fix".format(variable)
             label = "{}: ".format(variable)
-            row = [sg.Text(label, size=(10,1)), sg.Input(key=fix_key, size=(10,1))]
+            checkbox = "{}_box".format(variable)
+            row = [sg.Text(label, size=(10,1)), sg.Input(key=fix_key, size=(10,1)), sg.Checkbox("hold fixed?", key=checkbox)]
             layout.append(row)
 
-        layout.append([sg.Button('Hold Fixed')])
+        layout.append([sg.Button('Continue')])
         return layout
 
     def serialize_coordinates(self, coords):

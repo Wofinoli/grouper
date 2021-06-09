@@ -52,12 +52,22 @@ class Fit_Handler():
 
         return result
 
+    @staticmethod
+    def make_lambda(fixed, fit):
+        exp_string = "lambda {}".format(fit['variables'][-1])
+        for idx in range(0, len(fit['variables']) - 1):
+            exp_string += ",{}".format(fit['variables'][idx])
+
+        exp_string += ": {}".format(fit['function'])
+        print(exp_string)
+        fn = eval(exp_string)
+        return fn
 
 class Fit():
 
     def __init__(self, _fit):
         self.fit = _fit
-        self.fit['function'] = self.eval(_fit['function'])
+        self.fit['lambda'] = self.eval(_fit['function'])
 
     def eval(self, func_string):
         exp_string = "lambda {}".format(self['variables'][-1])
