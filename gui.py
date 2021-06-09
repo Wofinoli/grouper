@@ -347,6 +347,9 @@ class GUI:
         except Exception as e:
             print("Fit failed for " + self.title)
             print(e)
+            print(p0)
+            print(bounds)
+
             self.add_to_failed(self.active_group.name, self.title)
             #plt.close()
             success = False
