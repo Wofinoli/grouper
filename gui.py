@@ -657,9 +657,16 @@ class GUI:
             label = "{}: ".format(variable)
             checkbox = "{}_box".format(variable)
             if self.p0 is not None:
-                row = [sg.Text(label, size=(10,1)), sg.Input(self.p0[idx], key=refit_key, size=(10,1)), sg.Checkbox("hold fixed?", key=checkbox)]
+                text = self.p0[idx]
             else:
-                row = [sg.Text(label, size=(10,1)), sg.Input(key=refit_key, size=(10,1)), sg.Checkbox("hold fixed?", key=checkbox)]
+                text = ""
+
+            if self.fit['name'] == "IK_IV" and variable == "v_rev":
+                fixed = True
+            else:
+                fixed = False
+
+            row = [sg.Text(label, size=(10,1)), sg.Input(text, key=refit_key, size=(10,1)), sg.Checkbox("hold fixed?", default=fixed,key=checkbox)]
 
             layout.append(row)
 
