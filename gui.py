@@ -35,6 +35,7 @@ class GUI:
         self.col = 0
         self.group_colors = {}
         self.popt = None
+        self.p0 = None
         self.fit_handler = fits.Fit_Handler()
         self.fixed = False
         self.fixed_vals = []
@@ -136,7 +137,7 @@ class GUI:
                     bounds = self.bounds
                 else:
                     bounds = None
-                self.draw_plot(bounds=bounds)
+                self.draw_plot(self.p0, bounds)
                 self.finalize_groups()
 
             if event == 'Load groups':
@@ -157,11 +158,11 @@ class GUI:
                 self.to_excel()
 
             if event == 'Try fit':
-                p0, bounds = self.make_guesses(values)
+                self.p0, bounds = self.make_guesses(values)
                 refit_win.close()
                 refit_win = None
                 plt.close()
-                self.draw_plot(p0, bounds)
+                self.draw_plot(self.p0, bounds)
 
             if event in ['Accept', 'Reject', 'Next', 'Previous', 'Re-fit']:
                 if event == 'Re-fit':
@@ -177,7 +178,7 @@ class GUI:
                             self.reject_cell()
 
                         self.next_cell()
-                    self.draw_plot(bounds=self.bounds)
+                    self.draw_plot(self.p0, bounds=self.bounds)
 
 
     def make_plate_win(self):
@@ -331,8 +332,9 @@ class GUI:
             self.ydata.append(sweep.iloc[self.row,self.col])
            
         self.ydata = fits.Fit_Handler.handle_post(self.fit['post'], self.ydata)
-        if(p0 is None and len(self.fit['p0']) > 0):
-            p0 = fits.Fit_Handler.handle_p0(self.fit['p0'], self.ydata, control)
+        self.p0 = p0
+        if(self.p0 is None and len(self.fit['p0']) > 0):
+            self.p0 = fits.Fit_Handler.handle_p0(self.fit['p0'], self.ydata, control)
 
         if self.fit['name'] == 'Itail_rel':
             #mask = [val > 0 for val in self.ydata]
@@ -343,11 +345,11 @@ class GUI:
 
         x_range = np.arange(min(control), max(control), 0.01)
         try:
-            if p0:
+            if self.p0:
                 if bounds:
-                    self.popt, pcov = curve_fit(self.fit['lambda'], control, self.ydata, p0=p0, bounds=bounds, maxfev=100000)
+                    self.popt, pcov = curve_fit(self.fit['lambda'], control, self.ydata, p0=self.p0, bounds=bounds, maxfev=100000)
                 else:
-                    self.popt, pcov = curve_fit(self.fit['lambda'], control, self.ydata, p0=p0, maxfev=100000)
+                    self.popt, pcov = curve_fit(self.fit['lambda'], control, self.ydata, p0=self.p0, maxfev=100000)
             else:
                 self.popt, pcov = curve_fit(self.fit['lambda'], control, self.ydata, maxfev=100000)
         except OptimizeWarning:
@@ -652,7 +654,11 @@ class GUI:
             refit_key = "{}_refit".format(variable)
             label = "{}: ".format(variable)
             checkbox = "{}_box".format(variable)
-            row = [sg.Text(label, size=(10,1)), sg.Input(key=refit_key, size=(10,1)), sg.Checkbox("hold fixed?", key=checkbox)]
+            if self.p0 is not None:
+                row = [sg.Text(label, size=(10,1)), sg.Input(self.p0[idx], key=refit_key, size=(10,1)), sg.Checkbox("hold fixed?", key=checkbox)]
+            else:
+                row = [sg.Text(label, size=(10,1)), sg.Input(key=refit_key, size=(10,1)), sg.Checkbox("hold fixed?", key=checkbox)]
+
             layout.append(row)
 
         layout.append([sg.Button('Try fit')])
