@@ -343,6 +343,10 @@ class GUI:
             
             #control = np.array(control)[mask]
 
+        if self.fit['name'] == "IK_IV":
+            low_y = self.ydata[0]
+            self.ydata = [y - low_y for y in self.ydata]
+
         x_range = np.arange(min(control), max(control), 0.01)
         try:
             if self.p0:
