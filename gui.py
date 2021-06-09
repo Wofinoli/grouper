@@ -368,7 +368,7 @@ class GUI:
         cell_ax.set_ylabel(ylabel)
         cell_ax.grid()
 
-        if success and self.popt:
+        if success and self.popt.any():
             cell_ax.plot(control, self.ydata, 'b.', label="data")
             label = self.make_fit_label() % tuple(self.popt)
             cell_ax.plot(x_range, self.fit['lambda'](x_range, *self.popt), 'r-', label=label)
