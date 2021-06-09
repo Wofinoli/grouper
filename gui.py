@@ -352,7 +352,7 @@ class GUI:
                 self.popt, pcov = curve_fit(self.fit['lambda'], control, self.ydata, maxfev=100000)
         except OptimizeWarning:
             pass
-        except ValueError:
+        except Exception as e:
             print("Fit failed for " + self.title)
             #print(e)
 
