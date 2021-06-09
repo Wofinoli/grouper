@@ -3,6 +3,7 @@ import os
 import pandas as pd
 import numpy as np
 from scipy.optimize import curve_fit
+from scipy.optimize.optimize import OptimizeWarning
 from scipy import stats
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
@@ -349,11 +350,11 @@ class GUI:
                     self.popt, pcov = curve_fit(self.fit['lambda'], control, self.ydata, p0=p0, maxfev=100000)
             else:
                 self.popt, pcov = curve_fit(self.fit['lambda'], control, self.ydata, maxfev=100000)
-        except Exception as e:
+        except OptimizeWarning:
+            pass
+        except ValueError:
             print("Fit failed for " + self.title)
-            print(e)
-            print(p0)
-            print(bounds)
+            #print(e)
 
             self.add_to_failed(self.active_group.name, self.title)
             #plt.close()
