@@ -152,6 +152,7 @@ class GUI:
                 plot_win.close()
                 plot_win = None
                 self.plate.statistics = data_process.get_statistics(self.plate.accepted_fits)
+                self.finalize_failed()
                 self.to_excel()
 
             if event == 'Try fit':
@@ -351,8 +352,10 @@ class GUI:
         except Exception as e:
             print("Fit failed for " + self.title)
             print(e)
-            index = 0 if pd.isnull(self.plate.failed.index.max()) else self.plate.failed.index.max() + 1
-            self.plate.failed.loc[index] = self.title
+            print(p0)
+            print(bounds)
+
+            self.add_to_failed(self.active_group.name, self.title)
             #plt.close()
             success = False
             self.popt = None
@@ -389,6 +392,13 @@ class GUI:
 
         fig.canvas.draw()
 
+    def add_to_failed(self, group, title):
+        if group in self.plate.failed.columns and title in self.plate.failed[group].values:
+            return
+
+        additional = pd.DataFrame({group : [title]})
+        self.plate.failed = pd.concat([self.plate.failed, additional], axis=0)
+            
     def get_cumul(self, group):
         current = self.plate.accepted_fits[self.plate.accepted_fits['Cell'].str.startswith(group)]
         return current.loc[:, current.columns != 'Cell'].to_numpy()
@@ -510,7 +520,6 @@ class GUI:
 
         title += "_G"
         self.plate.source[title] = normalized_g
-
 
     def reject_cell(self):
         if(self.popt is None):
@@ -731,6 +740,8 @@ class GUI:
          
         return statistics
 
+    def finalize_failed(self):
+        self.plate.failed = self.plate.failed.apply(lambda x: pd.Series(x.dropna().values))
 
     def to_excel(self):
         last_sep = self.filename.rindex("/") + 1
@@ -741,6 +752,7 @@ class GUI:
         filename = "RESULT_" + self.fit['name'] + "_" + self.filename[last_sep:-4] + ".xlsx"
         filename = os.path.join(path, filename)
         with pd.ExcelWriter(filename) as writer: 
+            # Result Sheet
             name = "Result"
             workbook = writer.book
             worksheet = workbook.add_worksheet(name)
@@ -748,19 +760,26 @@ class GUI:
 
             startrow, startcol = 0, 0
 
-            self.plate.accepted_fits.to_excel(writer,sheet_name=name,startrow=startrow, startcol=startcol)
+            self.write_frame(self.plate.accepted_fits, writer, name, startrow, startcol)
+
             self.format_sheet(writer, workbook, worksheet, startrow, startcol, self.plate.accepted_fits, 'Cell')
 
             startcol = self.plate.accepted_fits.shape[1] + 2
             startrow = self.plate.statistics.shape[0] + 2
-            self.plate.statistics.to_excel(writer,sheet_name=name,startrow=0, startcol=startcol)
-            self.plate.failed.to_excel(writer,sheet_name=name, startrow=startrow, startcol=startcol)
+            self.write_frame(self.plate.statistics, writer, name, 0, startcol)
+
+            worksheet.write(startrow, startcol, "Failed")
+            self.write_frame(self.plate.failed, writer, name, startrow, startcol)
             
             startrow += self.plate.failed.shape[0] + 2
             group_statistics = self.get_group_statistics()
-            group_statistics.to_excel(writer, sheet_name=name, startrow=startrow, startcol=startcol)
+            self.write_frame(group_statistics, writer, name, startrow, startcol)
             self.format_sheet(writer,workbook,worksheet,startrow,startcol,group_statistics,'Group')
 
+            startcol += self.plate.statistics.shape[1] + 1
+            bold = workbook.add_format({'bold': True})
+            self.write_fits(writer, worksheet, name, startrow=0, startcol=startcol, style=bold)
+            # Source Sheet
 
             source_sheet = workbook.add_worksheet('source')
             writer.sheets['source'] = source_sheet
@@ -773,6 +792,27 @@ class GUI:
             conductance_cols[0] = True
 
             self.plate.source.loc[:, conductance_cols].to_excel(writer, sheet_name='source', startrow = source_height, startcol=0)
+
+    def write_frame(self, frame, writer, name, startrow, startcol): 
+        frame.to_excel(writer,sheet_name=name,startrow=startrow, startcol=startcol)
+
+    def write_fits(self, writer, worksheet, name, startrow, startcol, style):
+        num_vars = len(self.fit['variables']) - 1
+        sep = 1
+
+        for idx in range(0, num_vars):
+            var = self.fit['variables'][idx]
+            startcol += sep
+            write_col = startcol
+            worksheet.write(startrow, write_col, var, style)
+            for group in self.groups.keys():
+                current = self.plate.accepted_fits[self.plate.accepted_fits['Cell'].str.startswith(group)]
+                write_col += 1
+                var_frame = current[var]
+                var_frame = var_frame.rename("{}_{}".format(group, var))
+                var_frame.to_excel(writer, sheet_name=name, startrow=startrow, startcol=write_col, index=False)
+            startcol += len(self.groups) + sep
+
             
     def format_sheet(self, writer, workbook, worksheet, startrow, startcol, frame, key):
         if key == 'Cell':
