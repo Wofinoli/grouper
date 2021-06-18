@@ -736,6 +736,9 @@ class GUI:
         for name in self.groups.keys():
             current = self.plate.accepted_fits[self.plate.accepted_fits['Cell'].str.startswith(name)]
 
+            if current.empty:
+                continue
+
             statistics.iloc[index]['Group'] = name
             for label, content in current.items():
                 if(label == "Cell"):
