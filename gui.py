@@ -123,7 +123,7 @@ class GUI:
                 p0_win.close()
                 p0_win = None
                 if self.check_fixed(values):
-                    self.p0, bounds = self.make_guesses(values)
+                    self.p0, self.bounds = self.make_bounds(values)
                 plate_win = self.make_plate_win()
                 self.graph = plate_win['graph']
                 self.buttons = self.draw_buttons()
@@ -246,6 +246,19 @@ class GUI:
         layout = self.make_p0_layout()
         return sg.Window('Initial Conditions', layout, size=(300,50 + 25*len(layout)), finalize = True)
 
+    def check_fixed(self, values):
+        num_vars = len(self.fit['variables']) - 1
+        for idx in range(0, num_vars):
+            variable = self.fit['variables'][idx]
+            fix_key = "{}_fix".format(variable)
+            val = values[fix_key]
+            if val != "":
+                self.fixed = True
+                return True
+
+        self.fixed = False
+        return False
+
     def make_guesses(self, values):
         num_vars = len(self.fit['variables'])
         p0 = []
@@ -266,38 +279,25 @@ class GUI:
 
         return p0, bounds
 
-    def check_fixed(self, values):
-        num_vars = len(self.fit['variables']) - 1
-        for idx in range(0, num_vars):
-            variable = self.fit['variables'][idx]
-            fix_key = "{}_fix".format(variable)
-            val = values[fix_key]
-            if val != "":
-                self.fixed = True
-                return True
-
-        self.fixed = False
-        return False
-
     def make_bounds(self, values):
         num_vars = len(self.fit['variables']) - 1
+        p0 = []
         low_bound = [-np.inf] * (num_vars)
         upper_bound = [np.inf] * (num_vars)
-        fixed_vals = [None] * num_vars
         for idx in range(0, num_vars):
             variable = self.fit['variables'][idx]
             fix_key = "{}_fix".format(variable)
-            val = values[fix_key]
-            if val != "":
-                val = float(val)
+            checkbox = "{}_box".format(variable)
+            val = float(values[fix_key])
+            p0.append(val)
+            if values[checkbox]:
                 low_bound[idx] = np.nextafter(val, -np.inf) 
                 upper_bound[idx] = np.nextafter(val, np.inf) 
-                fixed_vals[idx] = val
 
+        p0 = [float(val) for val in p0]
         bounds = (tuple(low_bound), tuple(upper_bound))
-        fits.Fit_Handler.make_lambda(fixed_vals, self.fit)
-        #self.fit['lambda'] = Fit_Handler.make_lambda(fixed_vals, self.fit)
-        return fixed_vals, bounds
+
+        return p0, bounds
 
     def make_fit_label(self):
         label = "fit:"
