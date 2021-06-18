@@ -123,7 +123,7 @@ class GUI:
                 p0_win.close()
                 p0_win = None
                 if self.check_fixed(values):
-                    self.p0, self.bounds = self.make_bounds(values)
+                    self.p0, bounds = self.make_guesses(values)
                 plate_win = self.make_plate_win()
                 self.graph = plate_win['graph']
                 self.buttons = self.draw_buttons()
