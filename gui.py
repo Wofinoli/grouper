@@ -123,7 +123,7 @@ class GUI:
                 p0_win.close()
                 p0_win = None
                 if self.check_fixed(values):
-                    self.bounds = self.make_bounds(values)
+                    self.p0, self.bounds = self.make_bounds(values)
                 plate_win = self.make_plate_win()
                 self.graph = plate_win['graph']
                 self.buttons = self.draw_buttons()
@@ -297,8 +297,7 @@ class GUI:
         bounds = (tuple(low_bound), tuple(upper_bound))
         fits.Fit_Handler.make_lambda(fixed_vals, self.fit)
         #self.fit['lambda'] = Fit_Handler.make_lambda(fixed_vals, self.fit)
-
-        return bounds
+        return fixed_vals, bounds
 
     def make_fit_label(self):
         label = "fit:"
