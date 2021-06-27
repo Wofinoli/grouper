@@ -31,7 +31,7 @@ class Plate():
         index = raw.index
         columns = raw.columns
         self.row_names = list(string.ascii_uppercase[:self.rows])
-
+        print(self.filename)
         self.num_sweeps = 1
         self.num_param = 0
 
