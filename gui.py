@@ -726,7 +726,6 @@ class GUI:
             for coord in coords:
                 self.fill_cells(coord[0][0], coord[0][1], coord[1][0], coord[1][1])
 
-
     def get_group_statistics(self):
         rows = len(self.groups) * self.plate.accepted_fits.shape[1]
 

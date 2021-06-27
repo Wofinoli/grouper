@@ -66,6 +66,8 @@ class Plate():
                 for sweep in range(1, self.num_sweeps+1):
                     col = self.num_param*(sweep-1) + index
                     self.control.append(float(relevant_data.iloc[2,col]) * 1000)
+                    print(self.control[-1], "from ", 2, col)
+                    
                     
             if param == self.fit['dependent']:
                 for sweep in range(1, self.num_sweeps+1):
