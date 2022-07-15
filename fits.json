@@ -10,6 +10,28 @@
          "labels": ["Potential (mV)", "Current (pA)"],
          "p0": [70,0.4,0.6,1]
     },
+    "Peak_IV": {
+     "name": "Peak",
+     "variables": ["v_rev", "g_max", "v_half", "v_slope", "v"],
+     "dependent": "Peak",
+     "control": "Sweep VoltagePerCurrent",
+     "function": "(v - v_rev) * g_max/(1+np.exp((v_half - v)/v_slope))",
+     "fix": true,
+     "post": [],
+     "labels": ["Potential (mV)", "Current (pA)"],
+     "p0": [70,0.4,0.6,1]
+     },
+     "AUC_IV": {
+          "name": "AUC",
+          "variables": ["v_rev", "g_max", "v_half", "v_slope", "v"],
+          "dependent": "AUC",
+          "control": "Sweep VoltagePerCurrent",
+          "function": "(v - v_rev) * g_max/(1+np.exp((v_half - v)/v_slope))",
+          "fix": true,
+          "post": [],
+          "labels": ["Potential (mV)", "Current (pA)"],
+          "p0": [70,0.4,0.6,1]
+     },
     "IK_IV": {
          "name": "IK_IV",
          "variables": ["v_rev", "g_max", "v_half", "v_slope", "v"],

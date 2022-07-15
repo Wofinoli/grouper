@@ -137,8 +137,9 @@ class GUI:
                     bounds = self.bounds
                 else:
                     bounds = None
-                self.draw_plot(self.p0, bounds)
+                
                 self.finalize_groups()
+                self.draw_plot(self.p0, bounds)
 
             if event == 'Load groups':
                 if not load_group_win:
